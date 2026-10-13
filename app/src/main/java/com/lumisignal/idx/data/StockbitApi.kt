@@ -266,6 +266,15 @@ class StockbitApi(private val session: SessionStore) {
         } catch (e: Exception) {
             // fall through to other sources
         }
+        onProgress("Memuat anggota indeks IHSG")
+        for (index in listOf("IHSG", "COMPOSITE")) {
+            try {
+                collectSymbols(get("/emitten/indexes/$index", listOf("limit" to "500")), symbols)
+            } catch (e: AuthExpiredException) {
+                throw e
+            } catch (e: Exception) {
+            }
+        }
         for (type in listOf("topgainer", "toploser", "mostactive")) {
             try {
                 collectSymbols(get("/emitten/hotlist/$type", listOf("limit" to "50")), symbols)

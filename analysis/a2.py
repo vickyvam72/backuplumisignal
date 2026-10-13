@@ -1,0 +1,42 @@
+import pandas as pd, numpy as np
+df = pd.read_pickle('feat.pkl')
+d = df[(df['close']>=50) & df['next_ret'].notna() & df['ret'].notna() & (df['volume']>0) & (df['val_ma20']>=50e6)].copy()
+base = d['next_big'].mean(); base_avg = d['next_ret'].mean()
+print(f"Baseline: P(besok naik>=10%) = {base*100:.2f}%  | rata return besok {base_avg*100:+.2f}%  | n={len(d)}")
+def show(name, mask):
+    s = d[mask]
+    if len(s) < 150: return
+    p = s['next_big'].mean()
+    print(f"{name:52} n={len(s):6}  P(big)={p*100:5.2f}%  lift={p/base:4.1f}x  rata besok {s['next_ret'].mean()*100:+5.2f}%  naik {(s['next_ret']>0).mean()*100:4.1f}%")
+print("\n== Kondisi hari ini (T) -> besok (T+1) ==")
+show("ARA hari ini", d['is_ara'])
+show("ARA hari ini, streak 1 (ARA pertama)", d['is_ara'] & (d['ara_streak']==1))
+show("ARA hari ini, streak 2", d['is_ara'] & (d['ara_streak']==2))
+show("ARA hari ini, streak >=3", d['is_ara'] & (d['ara_streak']>=3))
+show("Hampir ARA (>=70% batas, close di pucuk) bukan ARA", d['near_ara'] & ~d['is_ara'])
+show("Naik 10-ARA tapi close tidak di pucuk (<0.85)", (d['ret']>=0.10) & ~d['is_ara'] & (d['close_pos']<0.85))
+show("Naik 5-10%", d['ret'].between(0.05,0.10))
+show("Naik 2-5%", d['ret'].between(0.02,0.05))
+show("Turun 5-10%", d['ret'].between(-0.10,-0.05))
+show("ARB / turun dalam", d['is_arb'])
+print("\n== Volume ==")
+for lo,hi in [(0,0.5),(0.5,1),(1,2),(2,4),(4,8),(8,1e9)]:
+    show(f"vol_ratio {lo}-{hi}", d['vol_ratio'].between(lo,hi))
+print("\n== Posisi harga ==")
+show("Close > high 20 hari (breakout)", d['close']>d['hh20'])
+show("Close > high 20 hari & vol>=2x", (d['close']>d['hh20']) & (d['vol_ratio']>=2))
+show("Close > high 20 hari & vol>=2x & close_pos>=0.8", (d['close']>d['hh20']) & (d['vol_ratio']>=2) & (d['close_pos']>=0.8))
+show("Range 20 hari sempit (<15%) lalu breakout", (d['range20']<0.15) & (d['close']>d['hh20']))
+show("Range 20 hari sempit (<15%) lalu breakout & vol>=2x", (d['range20']<0.15) & (d['close']>d['hh20']) & (d['vol_ratio']>=2))
+show("Volume kering (dry5<0.6) lalu vol>=3x", (d['dry5']<0.6) & (d['vol_ratio']>=3))
+show("Upper wick panjang (>4%) setelah naik >5%", (d['upper_wick']>0.04) & (d['ret']>0.05))
+show("Gain5 > 50%", d['gain5']>0.5)
+show("Gain5 20-50%", d['gain5'].between(0.2,0.5))
+show("Gain20 < -20% (sudah anjlok) & naik hari ini >3%", (d['gain20']<-0.2) & (d['ret']>0.03))
+show("Di bawah MA20 & naik >5% & vol>=2x", (d['dist_ma20']<0) & (d['ret']>0.05) & (d['vol_ratio']>=2))
+print("\n== Harga ==")
+for lo,hi in [(50,100),(100,200),(200,500),(500,2000),(2000,1e9)]:
+    show(f"harga {lo}-{hi}", d['close'].between(lo,hi))
+print("\n== Likuiditas (rata nilai 20 hari) ==")
+for lo,hi in [(50e6,300e6),(300e6,1e9),(1e9,5e9),(5e9,1e13)]:
+    show(f"nilai {lo/1e9:.2f}-{hi/1e9:.0f} M", d['val_ma20'].between(lo,hi))

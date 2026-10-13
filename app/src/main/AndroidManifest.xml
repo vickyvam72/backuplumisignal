@@ -34,6 +34,13 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize|uiMode"
+            android:theme="@style/Theme.Lumi" />
+
         <service
             android:name=".service.ScanService"
             android:exported="false"

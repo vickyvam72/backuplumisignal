@@ -1,6 +1,8 @@
 package com.lumisignal.idx.ui.screens
 
-import android.annotation.SuppressLint
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import com.lumisignal.idx.LoginActivity
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
@@ -70,12 +72,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginFlow(reason: String? = null) {
-    var showWeb by remember { mutableStateOf(false) }
-    if (showWeb) {
-        StockbitWebLogin(onBack = { showWeb = false })
-    } else {
-        WelcomeScreen(reason = reason, onConnect = { showWeb = true })
-    }
+    val ctx = LocalContext.current
+    WelcomeScreen(reason = reason, onConnect = {
+        ctx.startActivity(Intent(ctx, LoginActivity::class.java))
+    })
 }
 
 @Composable
@@ -136,204 +136,3 @@ private fun Feature(icon: ImageVector, title: String, body: String) {
     }
 }
 
-/** Hooks fetch/XHR inside stockbit.com to observe the bearer header and the login response. */
-private const val HOOK_JS = """
-(function(){
-  if (window.__lumiHooked) return; window.__lumiHooked = true;
-  function bearer(v){ try { if (v && String(v).indexOf('Bearer ') === 0) LumiBridge.onBearer(String(v).substring(7)); } catch(e){} }
-  function sniff(t){ try { if (t && t.indexOf('token') >= 0) LumiBridge.onJson(String(t)); } catch(e){} }
-  try {
-    var of = window.fetch;
-    if (of) {
-      window.fetch = function(input, init){
-        try {
-          var h = init && init.headers;
-          if (h) { bearer(typeof h.get === 'function' ? (h.get('Authorization') || h.get('authorization')) : (h['Authorization'] || h['authorization'])); }
-          if (input && typeof input === 'object' && input.headers && typeof input.headers.get === 'function') bearer(input.headers.get('Authorization'));
-        } catch(e){}
-        var p = of.apply(this, arguments);
-        try {
-          var url = (typeof input === 'string') ? input : ((input && input.url) || '');
-          if (/login|refresh|auth/i.test(url)) { p.then(function(r){ try { r.clone().text().then(sniff); } catch(e){} }); }
-        } catch(e){}
-        return p;
-      };
-    }
-  } catch(e){}
-  try {
-    var oo = XMLHttpRequest.prototype.open, os = XMLHttpRequest.prototype.setRequestHeader, ose = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(m, u){ this.__lumiUrl = u; return oo.apply(this, arguments); };
-    XMLHttpRequest.prototype.setRequestHeader = function(k, v){ try { if (/authorization/i.test(k)) bearer(v); } catch(e){} return os.apply(this, arguments); };
-    XMLHttpRequest.prototype.send = function(){
-      var x = this;
-      try { if (/login|refresh|auth/i.test(x.__lumiUrl || '')) x.addEventListener('load', function(){ try { sniff(x.responseText); } catch(e){} }); } catch(e){}
-      return ose.apply(this, arguments);
-    };
-  } catch(e){}
-})();
-"""
-
-private class LumiBridge(private val onToken: (String?, String?) -> Unit) {
-    private val main = Handler(Looper.getMainLooper())
-
-    @JavascriptInterface
-    fun onBearer(token: String?) {
-        if (TokenParser.isJwt(token)) main.post { onToken(token, null) }
-    }
-
-    @JavascriptInterface
-    fun onJson(text: String?) {
-        val t = TokenParser.fromJsonText(text) ?: return
-        main.post { onToken(t.access, t.refresh) }
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
-@Composable
-private fun StockbitWebLogin(onBack: () -> Unit) {
-    val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf("Silakan login dengan username & password Stockbit kamu.") }
-    var verifying by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(true) }
-    val tried = remember { mutableSetOf<String>() }
-    var pendingRefresh by remember { mutableStateOf<String?>(null) }
-    var webRef by remember { mutableStateOf<WebView?>(null) }
-
-    fun consider(access: String?, refresh: String?) {
-        if (!refresh.isNullOrBlank()) pendingRefresh = refresh
-        if (access.isNullOrBlank() || access in tried || verifying) return
-        tried += access
-        verifying = true
-        status = "Token ditemukan, memverifikasi ke Stockbit…"
-        scope.launch {
-            val ok = try {
-                Graph.api.validate(access)
-            } catch (e: Exception) {
-                false
-            }
-            if (ok) {
-                status = "Berhasil terhubung!"
-                Graph.session.save(access, pendingRefresh, DESKTOP_UA)
-            } else {
-                status = "Belum terhubung — selesaikan login di halaman Stockbit."
-                verifying = false
-            }
-        }
-    }
-
-    // Poll Stockbit's own credential cookie: the most reliable source of the session token.
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1500)
-            val cookie = try {
-                CookieManager.getInstance().getCookie("https://stockbit.com")
-            } catch (e: Exception) {
-                null
-            }
-            val t = TokenParser.fromCookieHeader(cookie)
-            if (t != null) consider(t.access, t.refresh)
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            webRef?.let {
-                it.stopLoading()
-                it.destroy()
-            }
-        }
-    }
-
-    LumiBackground {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(Lumi.SurfaceHi).clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali", tint = Lumi.Text) }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Login Stockbit", style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                    Text(status, style = MaterialTheme.typography.bodySmall, color = if (verifying) Lumi.Sky else Lumi.TextDim)
-                }
-                if (verifying || loading) {
-                    CircularProgressIndicator(color = Lumi.Sky, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                } else {
-                    Sparkle(16.dp, Lumi.Sky)
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp))
-                    .background(Lumi.Amber.copy(alpha = 0.1f)).padding(10.dp),
-                horizontalArrangement = Arrangement.Start,
-            ) {
-                Text(
-                    "Tips: gunakan username/email + password. Tombol login Google/Facebook di web Stockbit tidak berfungsi. Halaman bisa di-zoom dengan dua jari.",
-                    style = MaterialTheme.typography.bodySmall, color = Lumi.Amber,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        webRef = this
-                        val cm = CookieManager.getInstance()
-                        cm.setAcceptCookie(true)
-                        cm.setAcceptThirdPartyCookies(this, true)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.databaseEnabled = true
-                        settings.userAgentString = DESKTOP_UA
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
-                        settings.setSupportZoom(true)
-                        settings.builtInZoomControls = true
-                        settings.displayZoomControls = false
-                        settings.javaScriptCanOpenWindowsAutomatically = true
-                        addJavascriptInterface(LumiBridge { a, r -> consider(a, r) }, "LumiBridge")
-                        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                            try {
-                                WebViewCompat.addDocumentStartJavaScript(this, HOOK_JS, setOf("https://stockbit.com", "https://*.stockbit.com"))
-                            } catch (e: Exception) {
-                            }
-                        }
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                loading = true
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                loading = false
-                                view?.evaluateJavascript(HOOK_JS, null)
-                                CookieManager.getInstance().flush()
-                            }
-
-                            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                                val auth = request?.requestHeaders?.entries
-                                    ?.firstOrNull { it.key.equals("Authorization", true) }?.value
-                                if (auth != null && auth.startsWith("Bearer ")) {
-                                    val token = auth.removePrefix("Bearer ").trim()
-                                    if (TokenParser.isJwt(token)) {
-                                        Handler(Looper.getMainLooper()).post { consider(token, null) }
-                                    }
-                                }
-                                return null
-                            }
-
-                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                val host = request?.url?.host ?: return false
-                                // Keep the login inside the WebView; never hand off to the Stockbit app.
-                                return !(host.endsWith("stockbit.com") || host.endsWith("google.com") || host.endsWith("recaptcha.net") || host.endsWith("gstatic.com"))
-                            }
-                        }
-                        loadUrl("https://stockbit.com/login")
-                    }
-                },
-            )
-        }
-    }
-}

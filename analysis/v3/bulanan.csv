@@ -1,0 +1,66 @@
+bulan,id,strategi,trades,winrate,akumulasi_pl
+2025-11,1,Oversold + Volume Beli,11,63.6,52.5
+2025-11,2,Pantulan Hijau,12,66.7,84.9
+2025-11,3,Naik Pelan dari Dasar,3,0.0,-12.1
+2025-12,1,Oversold + Volume Beli,2,0.0,-16.7
+2025-12,2,Pantulan Hijau,11,54.5,43.4
+2025-12,3,Naik Pelan dari Dasar,16,56.2,54.4
+2025-12,4,Squeeze Naik Beruntun,14,57.1,26.4
+2025-12,5,Squeeze di MA20,30,33.3,-19.0
+2026-01,2,Pantulan Hijau,1,100.0,22.7
+2026-01,3,Naik Pelan dari Dasar,14,14.3,-42.8
+2026-01,4,Squeeze Naik Beruntun,14,7.1,-56.1
+2026-01,5,Squeeze di MA20,61,49.2,139.5
+2026-02,1,Oversold + Volume Beli,5,40.0,10.2
+2026-02,2,Pantulan Hijau,8,75.0,79.8
+2026-02,3,Naik Pelan dari Dasar,4,0.0,-21.4
+2026-02,5,Squeeze di MA20,20,10.0,-61.5
+2026-02,6,Pantulan Pasar Panik,29,65.5,202.8
+2026-03,1,Oversold + Volume Beli,13,38.5,-46.0
+2026-03,2,Pantulan Hijau,15,40.0,32.6
+2026-03,4,Squeeze Naik Beruntun,1,0.0,-2.8
+2026-03,6,Pantulan Pasar Panik,35,45.7,-1.7
+2026-04,1,Oversold + Volume Beli,5,60.0,21.3
+2026-04,2,Pantulan Hijau,6,83.3,87.0
+2026-04,3,Naik Pelan dari Dasar,41,56.1,151.6
+2026-04,4,Squeeze Naik Beruntun,36,52.8,118.5
+2026-04,5,Squeeze di MA20,57,52.6,203.0
+2026-04,6,Pantulan Pasar Panik,11,90.9,213.5
+2026-05,3,Naik Pelan dari Dasar,5,0.0,-42.5
+2026-05,4,Squeeze Naik Beruntun,7,28.6,5.8
+2026-05,6,Pantulan Pasar Panik,23,21.7,-12.4
+2026-06,1,Oversold + Volume Beli,15,60.0,19.5
+2026-06,2,Pantulan Hijau,13,46.2,11.2
+2026-06,3,Naik Pelan dari Dasar,2,50.0,-2.7
+2026-06,4,Squeeze Naik Beruntun,3,66.7,20.8
+2026-06,6,Pantulan Pasar Panik,26,46.2,95.0
+2026-07,1,Oversold + Volume Beli,4,75.0,34.5
+2026-07,2,Pantulan Hijau,3,100.0,66.0
+2026-07,3,Naik Pelan dari Dasar,52,61.5,148.8
+2026-07,4,Squeeze Naik Beruntun,62,59.7,210.3
+2026-07,5,Squeeze di MA20,90,58.9,311.4
+2026-08,2,Pantulan Hijau,1,100.0,18.9
+2026-08,3,Naik Pelan dari Dasar,13,69.2,70.7
+2026-08,4,Squeeze Naik Beruntun,18,55.6,61.4
+2026-08,5,Squeeze di MA20,93,61.3,289.7
+2026-09,1,Oversold + Volume Beli,1,0.0,-10.2
+2026-09,2,Pantulan Hijau,4,25.0,-26.1
+2026-09,3,Naik Pelan dari Dasar,3,33.3,-2.0
+2026-09,4,Squeeze Naik Beruntun,2,50.0,11.5
+2026-09,5,Squeeze di MA20,59,35.6,38.4
+2026-09,6,Pantulan Pasar Panik,14,42.9,5.7
+2026-10,1,Oversold + Volume Beli,4,75.0,27.5
+2026-10,2,Pantulan Hijau,6,66.7,51.5
+2026-10,6,Pantulan Pasar Panik,7,71.4,72.0
+2025-11,0,Top 5 gabungan,24,54.2,95.4
+2025-12,0,Top 5 gabungan,57,49.1,66.4
+2026-01,0,Top 5 gabungan,72,38.9,96.4
+2026-02,0,Top 5 gabungan,58,43.1,141.9
+2026-03,0,Top 5 gabungan,49,38.8,-14.4
+2026-04,0,Top 5 gabungan,98,55.1,548.7
+2026-05,0,Top 5 gabungan,34,20.6,-42.5
+2026-06,0,Top 5 gabungan,46,50.0,79.7
+2026-07,0,Top 5 gabungan,109,63.3,471.4
+2026-08,0,Top 5 gabungan,93,62.4,309.4
+2026-09,0,Top 5 gabungan,79,35.4,-20.2
+2026-10,0,Top 5 gabungan,9,66.7,55.6

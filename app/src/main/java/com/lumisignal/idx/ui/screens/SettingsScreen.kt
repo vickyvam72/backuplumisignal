@@ -1,0 +1,183 @@
+package com.lumisignal.idx.ui.screens
+
+import android.webkit.CookieManager
+import android.webkit.WebStorage
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.lumisignal.idx.BuildConfigInfo
+import com.lumisignal.idx.Graph
+import com.lumisignal.idx.service.Monitor
+import com.lumisignal.idx.ui.components.GhostButton
+import com.lumisignal.idx.ui.components.GlassCard
+import com.lumisignal.idx.ui.components.LumiLogo
+import com.lumisignal.idx.ui.components.Pill
+import com.lumisignal.idx.ui.components.SectionHeader
+import com.lumisignal.idx.ui.theme.Lumi
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+@Composable
+fun SettingsScreen() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var logoutDialog by remember { mutableStateOf(false) }
+    var notif by remember { mutableStateOf(Perms.notifications(ctx)) }
+    var bg by remember { mutableStateOf(Perms.background(ctx)) }
+    var monitorMsg by remember { mutableStateOf<String?>(null) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        notif = Perms.notifications(ctx)
+        bg = Perms.background(ctx)
+    }
+    val fmt = remember { SimpleDateFormat("d MMM yyyy HH:mm", Locale("id", "ID")) }
+    val name = Graph.session.displayName
+    val exp = Graph.session.accessExpiry
+    val hasRefresh = Graph.session.refresh != null
+    val lastRun = Graph.cache.lastMonitorRun
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
+        Spacer(Modifier.height(14.dp))
+        Text("Akun & Pengaturan", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
+        Spacer(Modifier.height(14.dp))
+
+        GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Green) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LumiLogo(44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(name.ifBlank { "Akun Stockbit" }, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
+                    Text(
+                        if (exp > 0) "Token berlaku s/d ${fmt.format(Date(exp * 1000))}" else "Token aktif",
+                        style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                    )
+                }
+                Pill("Terhubung", Lumi.Green)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                if (hasRefresh) "Token diperpanjang otomatis sebelum kedaluwarsa, selama aplikasi berjalan setidaknya seminggu sekali."
+                else "Token Stockbit berlaku ±24 jam. Jika habis, kamu akan diminta login ulang.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
+            )
+            Spacer(Modifier.height(12.dp))
+            GhostButton("Keluar dari Stockbit", { logoutDialog = true }, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Filled.ExitToApp, color = Lumi.Red)
+        }
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("Pemantauan latar belakang")
+        Spacer(Modifier.height(8.dp))
+        GlassCard(Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Pill(if (notif) "Notifikasi aktif" else "Notifikasi mati", if (notif) Lumi.Green else Lumi.Red)
+                Pill(if (bg) "Latar belakang aktif" else "Dibatasi baterai", if (bg) Lumi.Green else Lumi.Red)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Terakhir memeriksa harga: ${if (lastRun > 0) fmt.format(Date(lastRun)) else "belum pernah"}",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+            )
+            monitorMsg?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = Lumi.Sky)
+            }
+            Spacer(Modifier.height(12.dp))
+            GhostButton("Cek harga sinyal sekarang", {
+                monitorMsg = "Memeriksa…"
+                scope.launch {
+                    monitorMsg = try {
+                        val n = Monitor.runOnce(ctx, forceDaily = true)
+                        if (n > 0) "$n sinyal berubah status" else "Selesai — tidak ada perubahan status"
+                    } catch (e: Exception) {
+                        e.message ?: "Gagal memeriksa"
+                    }
+                }
+            }, Modifier.fillMaxWidth(), icon = Icons.Filled.Refresh)
+            if (!notif || !bg) {
+                Spacer(Modifier.height(8.dp))
+                GhostButton("Perbaiki izin", {
+                    if (!bg) Perms.requestBackground(ctx) else Perms.openAppSettings(ctx)
+                }, Modifier.fillMaxWidth(), color = Lumi.Amber)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        SectionHeader("Cara kerja Lumi")
+        Spacer(Modifier.height(8.dp))
+        GlassCard(Modifier.fillMaxWidth()) {
+            Bullet("Analisa memakai harga closing sesi terakhir yang sudah selesai. Scan Rabu 16:31 memakai closing Rabu; scan Kamis 12:00 tetap memakai closing Rabu.")
+            Bullet("Screening dua tahap: semua saham disaring dari candle harian, lalu maksimal 40 kandidat dianalisa broker summary-nya. Hasil akhir adalah 5 saham dengan skor tertinggi.")
+            Bullet("Stop loss diletakkan di bawah level struktur (low hari sinyal, level breakout, modal bandar, atau VWAP hari ARA), dibatasi 7–10% agar tidak terlalu jauh.")
+            Bullet("Sinyal batal jika harga dibuka di bawah batas batal atau tidak menyentuh area beli dalam 2 sesi. Posisi ditutup otomatis setelah 7–10 sesi.")
+            Bullet("Winrate dihitung dari sinyal yang selesai: TP = menang, SL = kalah. Sinyal batal tidak dihitung.")
+        }
+        Spacer(Modifier.height(16.dp))
+
+        GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Amber) {
+            Text("Disclaimer", style = MaterialTheme.typography.titleSmall, color = Lumi.Amber)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Lumi Signal IDX bukan produk resmi Stockbit dan bukan rekomendasi investasi. Data diambil dari akun Stockbit milikmu sendiri (read-only, tidak pernah membuat order). Akses otomatis bisa bertentangan dengan ketentuan Stockbit; gunakan secara wajar. Keputusan jual-beli sepenuhnya tanggung jawab pengguna.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("Lumi Signal IDX v${BuildConfigInfo.versionName(ctx)}", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+        Spacer(Modifier.height(28.dp))
+    }
+
+    if (logoutDialog) {
+        AlertDialog(
+            onDismissRequest = { logoutDialog = false },
+            containerColor = Lumi.Surface,
+            title = { Text("Keluar dari Stockbit?", color = Lumi.Text) },
+            text = { Text("Pemantauan sinyal berhenti sampai kamu login lagi. Riwayat strategi dan porto tetap tersimpan.", color = Lumi.TextDim) },
+            confirmButton = {
+                TextButton(onClick = {
+                    logoutDialog = false
+                    CookieManager.getInstance().removeAllCookies(null)
+                    WebStorage.getInstance().deleteAllData()
+                    Graph.session.clear()
+                }) { Text("Keluar", color = Lumi.Red) }
+            },
+            dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text("Batal", color = Lumi.TextDim) } },
+        )
+    }
+}
+
+@Composable
+private fun Bullet(text: String) {
+    Row(Modifier.padding(vertical = 4.dp)) {
+        Text("•", style = MaterialTheme.typography.bodyMedium, color = Lumi.Sky)
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+    }
+}

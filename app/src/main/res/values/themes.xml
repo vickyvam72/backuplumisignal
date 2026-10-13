@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lumi_bg">#FF070B1A</color>
+
+    <style name="Theme.Lumi" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lumi_bg</item>
+        <item name="android:colorBackground">@color/lumi_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/lumi_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

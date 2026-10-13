@@ -217,6 +217,7 @@ fun ManualDetailScreen(strategyId: Int, onBack: () -> Unit) {
         signalDate = r.refDate,
         day = r.data.day,
         range20 = r.data.range20,
+        range5 = r.data.range5,
         close = t.close,
         changePct = Market.changePct(t, bars.getOrNull(bars.size - 2)),
         headerTag = "ANALISA MANUAL",

@@ -88,6 +88,7 @@ fun SignalDetailScreen(id: String, onBack: () -> Unit) {
         signalDate = sig.refDate,
         day = sig.broker,
         range20 = sig.broker20,
+        range5 = sig.broker5,
         close = sig.close,
         changePct = sig.changePct,
         headerTag = if (sig.source == SOURCE_PORTO) "PORTO" else "RIWAYAT STRATEGI",
@@ -176,6 +177,7 @@ fun AnalysisDetail(
     signalDate: String,
     day: BrokerSummary?,
     range20: BrokerSummary?,
+    range5: BrokerSummary? = null,
     close: Double,
     changePct: Double,
     headerTag: String,
@@ -269,6 +271,12 @@ fun AnalysisDetail(
                         Text("BROKER SUMMARY HARI SINYAL", style = MaterialTheme.typography.labelSmall, color = Lumi.Sky)
                         Spacer(Modifier.height(6.dp))
                         BrokerPanel(day)
+                    }
+                    if (range5 != null && range5.buyers.isNotEmpty() && strategy.needsRange5) {
+                        Spacer(Modifier.height(16.dp))
+                        Text("ALIRAN BANDAR 5 HARI", style = MaterialTheme.typography.labelSmall, color = Lumi.Sky)
+                        Spacer(Modifier.height(6.dp))
+                        BrokerPanel(range5)
                     }
                     if (range20 != null && range20.buyers.isNotEmpty() && strategy.needsRange) {
                         Spacer(Modifier.height(16.dp))

@@ -148,6 +148,7 @@ data class Signal(
     val bars: List<Bar> = emptyList(),
     val broker: BrokerSummary? = null,
     val broker20: BrokerSummary? = null,
+    val broker5: BrokerSummary? = null,
     val linkedId: String? = null,
     val customEntry: Double? = null,
     val startDate: String? = null,

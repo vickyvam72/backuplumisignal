@@ -33,10 +33,12 @@ object Planner {
 
         when (s) {
             Strategy.CLOSING_KUAT -> {
-                entryLow = Market.minusTicks(c, 1)
-                entryHigh = Market.plusTicks(c, 1)
-                cancel = Market.floorTick(c * 0.97)
-                cancelReason = "Batal jika harga pembukaan turun >3% dari close"
+                // Don't chase the close: wait in the zone between the day's VWAP and the close.
+                val vwap = if (t.average > 0) t.average else c
+                entryLow = Market.ceilTick(max(min(vwap, c), c * 0.96))
+                entryHigh = c
+                cancel = Market.floorTick(c * 0.95)
+                cancelReason = "Batal jika harga pembukaan turun >5% dari close (bandar membuang barang)"
                 candidates += Level(Market.minusTicks(t.low), "Di bawah low hari sinyal ${Fmt.price(t.low)} — jika jebol, dorongan bandar hari itu gagal")
                 val top = d.day?.buyers?.firstOrNull()
                 if (top != null && top.avgPrice > 0 && top.avgPrice < c) {
@@ -45,9 +47,10 @@ object Planner {
                 candidates += Level(Market.minusTicks(swingLow5), "Di bawah low 5 hari terakhir (${Fmt.price(swingLow5)})")
             }
             Strategy.BREAKOUT -> {
+                // Buy the retest of the broken ceiling, not the breakout candle's close.
                 val ceiling = Market.highestHigh(prior10)
                 entryLow = Market.ceilTick(min(ceiling, c))
-                entryHigh = c
+                entryHigh = Market.floorTick(min(c, ceiling + (c - ceiling) * 0.5).coerceAtLeast(entryLow))
                 cancel = Market.floorTick(ceiling)
                 cancelReason = "Batal jika harga pembukaan kembali di bawah level breakout ${Fmt.price(ceiling)}"
                 candidates += Level(Market.minusTicks(ceiling, 2), "Di bawah level breakout ${Fmt.price(ceiling)} — breakout gagal jika harga kembali ke bawahnya")
@@ -56,7 +59,7 @@ object Planner {
             Strategy.ARA_HUNTER -> {
                 val atAra = Market.isAra(t, bars.getOrNull(n - 2))
                 entryLow = c
-                entryHigh = Market.floorTick(c * 1.04)
+                entryHigh = Market.floorTick(c * 1.03)
                 cancel = if (atAra) c else Market.floorTick(c * 0.98)
                 cancelReason = if (atAra) "Batal jika harga pembukaan di bawah close ARA (antrean beli ditarik)"
                 else "Batal jika harga pembukaan turun >2% dari close"
@@ -102,7 +105,9 @@ object Planner {
         }
 
         val ref = entryHigh
-        val minDist = max(0.025, 2 * tk / ref)
+        // Gorengan swing hard intraday: a stop tighter than ~0.8x the daily range is noise, not structure.
+        val atr = Market.atr(bars.takeLast(15))
+        val minDist = maxOf(0.025, 2 * tk / ref, 0.8 * atr / ref).coerceAtMost(maxRisk * 0.9)
         val valid = candidates.filter { it.price > 0 && it.price < ref }
         val inRange = valid.filter { (ref - it.price) / ref in minDist..maxRisk }
         val sl: Level = when {
@@ -135,7 +140,7 @@ object Planner {
     private fun target(s: Strategy, bars: List<Bar>, ref: Double): Level {
         val atr = max(Market.atr(bars.takeLast(15)), Market.tick(ref))
         val minGain = when (s) {
-            Strategy.ARA_HUNTER, Strategy.GORENGAN_BANGUN -> 0.06
+            Strategy.ARA_HUNTER, Strategy.GORENGAN_BANGUN -> 0.05
             Strategy.BREAKOUT -> 0.05
             else -> 0.04
         }
@@ -143,16 +148,16 @@ object Planner {
         val resistance = Market.swingHighs(bars.takeLast(60), 2)
             .filter { it > floor }
             .minOrNull()
-        if (resistance != null && resistance - ref <= 3.5 * atr) {
+        if (resistance != null && resistance - ref <= 3.0 * atr) {
             return Level(
                 Market.floorTick(resistance - Market.tick(resistance)),
                 "Tepat di bawah resistance ${Fmt.price(resistance)} (puncak sebelumnya) — titik jual yang realistis",
             )
         }
-        val v = max(floor, ref + 1.5 * atr)
+        val v = max(floor, ref + 1.2 * atr)
         return Level(
             Market.ceilTick(v),
-            "Proyeksi 1,5x ATR (rata-rata gerak harian ${Fmt.price(atr)}) karena belum ada resistance dekat",
+            "Proyeksi 1,2x ATR (rata-rata gerak harian ${Fmt.price(atr)}) karena belum ada resistance dekat — target realistis untuk gorengan",
         )
     }
 }

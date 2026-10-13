@@ -12,8 +12,13 @@ import kotlin.math.roundToInt
 
 /**
  * Five setups tuned for the IDX, where most movers are thin, operator-driven ("gorengan") stocks.
- * Each strategy has a few REQUIRED conditions that define the setup and OPTIONAL ones that only
- * raise the score, so a normal day still yields candidates and the score ranks them.
+ *
+ * Every strategy shares the same quality gates that remove the classic gorengan traps:
+ *  - enough liquidity to get out,
+ *  - not already run up too far (late buyers are the exit liquidity),
+ *  - the main buyer is not a retail broker (retail FOMO, not a bandar),
+ *  - the bandar is not distributing over the last 5 sessions.
+ * On top of that each strategy has a few REQUIRED setup rules and OPTIONAL rules that only score.
  */
 enum class Strategy(
     val id: Int,
@@ -25,29 +30,32 @@ enum class Strategy(
 ) {
     CLOSING_KUAT(
         1, "Closing Kuat Bandar", "Momentum lanjutan",
-        "Saham naik 2% sampai di bawah ARA, ditutup di 30% teratas range harian dengan volume ≥1,5x rata-rata, dan pembelian hari itu dikuasai bandar (detector akumulasi atau top 3 pembeli ≥50%). Bandar masih membeli sampai penutupan, jadi harga cenderung dilanjutkan besok.",
+        "Naik 2% sampai di bawah ARA, ditutup kuat di atas MA20 dengan volume ≥1,5x, bandar (bukan ritel) menguasai pembelian hari itu dan tidak distribusi dalam 5 hari. Entry tidak mengejar close: ditunggu di area harga rata-rata transaksi hari sinyal.",
         false, "Sedang",
     ),
     BREAKOUT(
         2, "Breakout Volume", "Tembus atap dengan ledakan volume",
-        "Harga ditutup menembus high 10 hari terakhir dengan volume ≥2x rata-rata dan candle kuat. Bonus jika sebelumnya volume kering, menembus high 20 hari, dan dikonfirmasi akumulasi bandar.",
+        "Close menembus high 10 hari dengan volume ≥2x dan candle kuat, harga di atas MA20, belum naik terlalu jauh, dan bandar 5 hari tidak distribusi. Entry di area retest level breakout.",
         false, "Sedang–tinggi",
     ),
     ARA_HUNTER(
         3, "ARA Hunter", "Lanjutan ARA & hampir ARA",
-        "Saham ditutup di ARA atau sangat dekat ARA (≥70% batas ARA, close di puncak), bukan hari ketiga beruntun, dan pembeli utama tidak ikut menjual. Pola khas gorengan yang sedang \"dikerek\".",
+        "Ditutup di ARA atau sangat dekat ARA, bukan hari ke-3 beruntun, pembeli utama bukan ritel dan tidak ikut menjual, serta bandar 5 hari masih akumulasi. Pola gorengan yang sedang dikerek.",
         false, "Tinggi",
     ),
     PANTULAN(
         4, "Pantulan Modal Bandar", "Beli koreksi di harga bandar",
-        "Bandar mengumpulkan barang selama 20 hari, harga koreksi ≥4% sampai ke sekitar harga rata-rata beli bandar (±5%), lalu muncul candle pembalikan. Stop loss paling dekat.",
+        "Bandar mengumpulkan barang selama 20 hari, harga koreksi ≥4% dengan volume sepi sampai ±5% dari harga rata-rata beli bandar, lalu muncul candle pembalikan. Stop loss paling dekat.",
         true, "Rendah–sedang",
     ),
     GORENGAN_BANGUN(
         5, "Gorengan Bangun", "Akumulasi lama, mulai dikerek",
-        "Pembelian 20 hari terkonsentrasi di sedikit broker (top 1 ≥30% atau top 3 ≥55%), lalu hari ini muncul pemicu: naik ≥2%, volume ≥1,5x, ditutup kuat, dan harga belum lari jauh dari modal bandar.",
+        "Pembelian 20 hari terkonsentrasi di sedikit broker non-ritel, lalu hari ini muncul pemicu: naik ≥2%, volume ≥1,5x, ditutup kuat, harga belum lari jauh dari modal bandar.",
         true, "Tinggi",
     );
+
+    /** Strategies that read the last 5 sessions of broker flow (distribution guard). */
+    val needsRange5: Boolean get() = !needsRange
 
     companion object {
         fun byId(id: Int): Strategy = entries.firstOrNull { it.id == id } ?: CLOSING_KUAT
@@ -61,7 +69,11 @@ data class StockData(
     val bars: List<Bar>,
     val day: BrokerSummary? = null,
     val range20: BrokerSummary? = null,
+    val range5: BrokerSummary? = null,
 )
+
+/** Retail-heavy brokers: when they lead the buying it is usually retail FOMO, not a bandar. */
+val RETAIL_BROKERS = setOf("XL", "XC", "YP", "PD", "CC", "KK")
 
 private class Stats(bars: List<Bar>) {
     val n = bars.size
@@ -85,7 +97,11 @@ private class Stats(bars: List<Bar>) {
     val tradedDays: Int = bars.takeLast(20).count { it.volume > 0 }
     val body: Double = abs(t.close - t.open)
     val lowerWick: Double = min(t.open, t.close) - t.low
+    val upperWick: Double = t.high - max(t.open, t.close)
     val reversal: Boolean = t.close > t.open || lowerWick >= 2 * max(body, Market.tick(t.close))
+    val closes = bars.map { it.close }
+    val ma20: Double? = Market.sma(closes, min(20, n))
+    val gain5: Double = bars.getOrNull(n - 6)?.let { (t.close / it.close - 1) * 100 } ?: 0.0
 }
 
 object StrategyEngine {
@@ -100,6 +116,10 @@ object StrategyEngine {
         return chg >= Market.araFraction(prev.close) * 100 * 0.7 && Market.closePos(bar) >= 0.85
     }
 
+    /** Liquidity good enough to exit: average ≥ Rp300 jt/day or signal-day value ≥ Rp1 M. */
+    private fun liquidEnough(st: Stats, relaxed: Boolean): Boolean =
+        if (relaxed) st.avgValue20 >= 150e6 || st.t.value >= 500e6 else st.avgValue20 >= 300e6 || st.t.value >= 1e9
+
     // ---------------------------------------------------------------- prefilter (12 bars)
 
     /**
@@ -110,21 +130,23 @@ object StrategyEngine {
         if (bars.size < 4) return null
         val st = Stats(bars)
         if (st.t.close < 50 || st.arb || st.t.volume <= 0) return null
+        val relaxed = s == Strategy.GORENGAN_BANGUN || s == Strategy.PANTULAN
+        if (!liquidEnough(st, relaxed) && st.t.value < 300e6) return null
         return when (s) {
             Strategy.CLOSING_KUAT ->
-                if (st.chg >= 1.5 && !st.ara && st.closePos >= 0.65 && st.volRatio >= 1.3) st.volRatio + st.closePos else null
+                if (st.chg >= 1.5 && !st.ara && st.closePos >= 0.65 && st.volRatio >= 1.3 && st.gain5 <= 40) st.volRatio + st.closePos else null
             Strategy.BREAKOUT -> {
                 val ceiling = Market.highestHigh(st.prior10)
-                if (st.volRatio >= 1.7 && ceiling > 0 && st.t.close > ceiling && st.closePos >= 0.5) st.volRatio else null
+                if (st.volRatio >= 1.7 && ceiling > 0 && st.t.close > ceiling && st.closePos >= 0.5 && st.gain5 <= 40) st.volRatio else null
             }
             Strategy.ARA_HUNTER ->
-                if (st.chg >= st.araPct * 0.65 && st.closePos >= 0.8) st.chg / st.araPct + min(st.volRatio, 10.0) / 10.0 else null
+                if (st.chg >= st.araPct * 0.65 && st.closePos >= 0.8 && st.gain5 <= 70) st.chg / st.araPct + min(st.volRatio, 10.0) / 10.0 else null
             Strategy.PANTULAN -> {
                 val peak = Market.highestHigh(bars.takeLast(10))
                 if (st.t.close <= peak * 0.965 && st.reversal) 1.0 + (1 - st.t.close / peak) else null
             }
             Strategy.GORENGAN_BANGUN ->
-                if (st.chg >= 1.8 && st.volRatio >= 1.3 && st.closePos >= 0.55) st.volRatio + st.chg / 10.0 else null
+                if (st.chg >= 1.8 && st.volRatio >= 1.3 && st.closePos >= 0.55 && st.gain5 <= 40) st.volRatio + st.chg / 10.0 else null
         }
     }
 
@@ -141,6 +163,7 @@ object StrategyEngine {
         val checks = mutableListOf<Check>()
         val highlights = mutableListOf<String>()
 
+        // ---- shared quality gates
         checks += Check("Harga minimal Rp50", "Close ${Fmt.price(st.t.close)}", st.t.close >= 50)
         val minShare = if (s == Strategy.GORENGAN_BANGUN || s == Strategy.ARA_HUNTER) 0.4 else 0.6
         val minDays = ceil(st.window * minShare).toInt()
@@ -149,6 +172,19 @@ object StrategyEngine {
             st.tradedDays >= minDays,
         )
         checks += Check("Bukan ARB", if (st.arb) "Ditutup ARB" else "Perubahan ${Fmt.pct(st.chg)}", !st.arb)
+        val relaxed = s == Strategy.GORENGAN_BANGUN || s == Strategy.PANTULAN
+        checks += Check(
+            "Cukup likuid untuk keluar",
+            "Rata-rata ${Fmt.idr(st.avgValue20)}/hari · hari sinyal ${Fmt.idr(st.t.value)} (min. ${if (relaxed) "150 jt / 500 jt" else "300 jt / 1 M"})",
+            liquidEnough(st, relaxed),
+        )
+        if (s != Strategy.PANTULAN) {
+            val maxRun = if (s == Strategy.ARA_HUNTER) 60.0 else 35.0
+            checks += Check(
+                "Belum lari terlalu jauh", "Naik ${Fmt.pct(st.gain5)} dalam 5 hari (maks. ${Fmt.num(maxRun, 0)}%)",
+                st.gain5 <= maxRun,
+            )
+        }
 
         val score = when (s) {
             Strategy.CLOSING_KUAT -> closingKuat(st, d, checks, highlights)
@@ -192,14 +228,51 @@ object StrategyEngine {
         return if (lots > 0) top.sumOf { it.avgPrice * it.lots } / lots else 0.0
     }
 
+    /** Main buyer is not a retail broker. Returns 1.0 when clean, 0.0 when retail leads. */
+    private fun bandarNotRetail(b: BrokerSummary?, checks: MutableList<Check>, required: Boolean, label: String = "Pembeli utama bukan ritel"): Double {
+        if (b == null || b.buyers.isEmpty()) {
+            noBroker(checks, label, required)
+            return 0.0
+        }
+        val top = b.buyers.first().code
+        val retailInTop3 = b.buyers.take(3).count { it.code in RETAIL_BROKERS }
+        val ok = top !in RETAIL_BROKERS && retailInTop3 <= 1
+        checks += Check(
+            label,
+            "Top buyer $top${if (top in RETAIL_BROKERS) " (ritel)" else ""} · $retailInTop3 broker ritel di top 3",
+            ok, "bandar", required,
+        )
+        return if (ok) 1.0 else 0.0
+    }
+
+    /** The last 5 sessions do not show distribution. */
+    private fun notDistributing(b: BrokerSummary?, checks: MutableList<Check>, required: Boolean): Double {
+        if (b == null || b.buyers.isEmpty()) {
+            noBroker(checks, "Bandar 5 hari tidak distribusi", required)
+            return 0.0
+        }
+        val dist = b.mainLabel.contains("dist", ignoreCase = true)
+        checks += Check(
+            "Bandar 5 hari tidak distribusi", "Detector 5 hari: ${b.mainLabel} · top buyer ${topCodes(b, 3)}",
+            !dist, "bandar", required,
+        )
+        return if (dist) 0.0 else 0.5 + 0.5 * b.accStrength()
+    }
+
     // ---- S1 ---------------------------------------------------------------------
     private fun closingKuat(st: Stats, d: StockData, checks: MutableList<Check>, hl: MutableList<String>): Double {
         checks += Check(
             "Naik ≥2% & belum ARA", "Perubahan ${Fmt.pct(st.chg)} (batas ARA ±${Fmt.num(st.araPct, 0)}%)",
             st.chg >= 2.0 && !st.ara,
         )
-        checks += Check("Ditutup kuat", "Close di ${Fmt.share(st.closePos)} range hari itu (min. 70%)", st.closePos >= 0.7)
+        checks += Check(
+            "Ditutup kuat, ekor atas pendek",
+            "Close di ${Fmt.share(st.closePos)} range (min. 70%) · ekor atas ${Fmt.price(st.upperWick)}",
+            st.closePos >= 0.7 && st.upperWick <= max(st.body, Market.tick(st.t.close) * 2),
+        )
         checks += Check("Volume ≥1,5x rata-rata", "Volume ${Fmt.ratio(st.volRatio)} rata-rata 20 hari", st.volRatio >= 1.5)
+        val ma = st.ma20
+        checks += Check("Di atas MA20 (tren naik)", "Close ${Fmt.price(st.t.close)} vs MA20 ${Fmt.price(ma)}", ma != null && st.t.close > ma)
         val b = d.day
         var acc = 0.0
         var share = 0.0
@@ -213,15 +286,17 @@ object StrategyEngine {
                 "Detector ${b.mainLabel} · top 3 (${topCodes(b, 3)}) = ${Fmt.share(share)} nilai beli",
                 acc > 0 || share >= 0.5, "bandar",
             )
-            checks += Check("Akumulasi kuat", "Detector ${b.mainLabel} dan top 3 ≥50%", acc > 0 && share >= 0.5, "bandar", false)
             hl += b.mainLabel
             hl += "Top buyer ${b.buyers.first().code}"
         }
+        val clean = bandarNotRetail(b, checks, true)
+        val five = notDistributing(d.range5, checks, true)
         checks += Check("Volume meledak ≥3x", "Volume ${Fmt.ratio(st.volRatio)}", st.volRatio >= 3.0, required = false)
         hl.add(0, Fmt.pct(st.chg))
         hl += "Vol ${Fmt.ratio(st.volRatio)}"
         val sweet = if (st.chg in 3.0..12.0) 1.0 else 0.6
-        return 22 * min(st.volRatio / 4, 1.0) + 20 * st.closePos + 23 * min(share / 0.7, 1.0) + 25 * acc + 10 * sweet
+        return 18 * min(st.volRatio / 4, 1.0) + 15 * st.closePos + 17 * min(share / 0.7, 1.0) + 20 * acc +
+            10 * clean + 12 * five + 8 * sweet
     }
 
     // ---- S2 ---------------------------------------------------------------------
@@ -238,9 +313,10 @@ object StrategyEngine {
         )
         checks += Check("Volume ≥2x rata-rata", "Volume ${Fmt.ratio(st.volRatio)} rata-rata 20 hari", st.volRatio >= 2.0)
         checks += Check("Candle kuat", "Close di ${Fmt.share(st.closePos)} range hari itu (min. 60%)", st.closePos >= 0.6 && st.chg > 0)
-        checks += Check(
-            "Tembus high 20 hari", "High 20 hari ${Fmt.price(high20)}", high20 > 0 && st.t.close > high20, required = false,
-        )
+        val ma = st.ma20
+        checks += Check("Di atas MA20 (tren naik)", "Close ${Fmt.price(st.t.close)} vs MA20 ${Fmt.price(ma)}", ma != null && st.t.close > ma)
+        val five = notDistributing(d.range5, checks, true)
+        checks += Check("Tembus high 20 hari", "High 20 hari ${Fmt.price(high20)}", high20 > 0 && st.t.close > high20, required = false)
         checks += Check(
             "Sebelumnya volume kering", "Volume 5 hari sebelumnya = ${Fmt.share(dryRatio)} rata-rata (ideal <80%)",
             dryRatio < 0.8, required = false,
@@ -254,11 +330,13 @@ object StrategyEngine {
             checks += Check("Dikonfirmasi akumulasi", "Detector ${b.mainLabel} · top buyer ${topCodes(b, 3)}", acc > 0, "bandar", false)
             hl += b.mainLabel
         }
+        val clean = bandarNotRetail(b, checks, false)
         hl.add(0, "Breakout ${Fmt.price(high10)}")
         hl += "Vol ${Fmt.ratio(st.volRatio)}"
         val brk = if (high10 > 0) Market.clamp01((st.t.close / high10 - 1) / 0.08) else 0.0
         val big = if (high20 > 0 && st.t.close > high20) 1.0 else 0.0
-        return 25 * min(st.volRatio / 5, 1.0) + 15 * Market.clamp01(1 - dryRatio) + 15 * brk + 10 * big + 15 * st.closePos + 20 * acc
+        return 20 * min(st.volRatio / 5, 1.0) + 12 * Market.clamp01(1 - dryRatio) + 10 * brk + 8 * big + 12 * st.closePos +
+            15 * acc + 10 * clean + 13 * five
     }
 
     // ---- S3 ---------------------------------------------------------------------
@@ -304,10 +382,12 @@ object StrategyEngine {
             hl += "Top buyer $topBuyer"
             hl += b.mainLabel
         }
+        val clean = bandarNotRetail(b, checks, true)
+        val five = notDistributing(d.range5, checks, true)
         checks += Check("Volume ≥2x", "Volume ${Fmt.ratio(st.volRatio)}", st.volRatio >= 2.0, required = false)
         hl.add(0, if (st.ara) "ARA ${Fmt.pct(st.chg)}" else "Hampir ARA ${Fmt.pct(st.chg)}")
-        return 25 * acc + 20 * min(sellerRatio / 3, 1.0) + 20 * min(top1 / 0.4, 1.0) +
-            15 * (if (run <= 1) 1.0 else 0.5) + 10 * min(st.volRatio / 4, 1.0) + 10 * (if (st.ara) 1.0 else 0.6)
+        return 20 * acc + 15 * min(sellerRatio / 3, 1.0) + 15 * min(top1 / 0.4, 1.0) + 12 * (if (run <= 1) 1.0 else 0.5) +
+            8 * min(st.volRatio / 4, 1.0) + 8 * (if (st.ara) 1.0 else 0.6) + 10 * clean + 12 * five
     }
 
     // ---- S4 ---------------------------------------------------------------------
@@ -325,7 +405,8 @@ object StrategyEngine {
         val last3 = d.bars.subList(max(0, n - 4), n - 1)
         val quietRatio = if (st.avgVol20 > 0 && last3.isNotEmpty()) last3.sumOf { it.volume } / last3.size / st.avgVol20 else 1.0
         checks += Check(
-            "Koreksi sepi", "Volume 3 hari sebelumnya ${Fmt.share(quietRatio)} dari rata-rata", quietRatio < 1.0, required = false,
+            "Koreksi sepi (bukan dibanting)", "Volume 3 hari sebelumnya ${Fmt.share(quietRatio)} dari rata-rata (maks. 120%)",
+            quietRatio < 1.2,
         )
         val b = d.range20
         var acc = 0.0
@@ -350,9 +431,17 @@ object StrategyEngine {
             hl += "Modal $top ${Fmt.price(avg)}"
             hl += b.mainLabel
         }
+        val clean = bandarNotRetail(b, checks, true, "Akumulator bukan ritel")
+        val todaySellers = d.day?.sellers?.take(3)?.map { it.code } ?: emptyList()
+        val topCode = b?.buyers?.firstOrNull()?.code
+        checks += Check(
+            "Bandar tidak ikut jual hari ini",
+            "Top 3 penjual hari ini: ${todaySellers.joinToString(", ").ifBlank { "-" }}",
+            topCode == null || topCode !in todaySellers, "bandar", false,
+        )
         hl.add(0, "Koreksi ${Fmt.num(pullback)}%")
-        return 25 * acc + 20 * min(share / 0.5, 1.0) + 30 * Market.clamp01(1 - abs(dist) / 5.0) + 15 * Market.clamp01(1 - quietRatio) +
-            10 * (if (st.t.close > st.t.open) 1.0 else 0.6)
+        return 22 * acc + 15 * min(share / 0.5, 1.0) + 25 * Market.clamp01(1 - abs(dist) / 5.0) + 13 * Market.clamp01(1.2 - quietRatio) +
+            10 * clean + 15 * (if (topCode != null && topCode !in todaySellers) 1.0 else 0.0)
     }
 
     // ---- S5 ---------------------------------------------------------------------
@@ -365,6 +454,7 @@ object StrategyEngine {
         var share3 = 0.0
         var concentration = 0.0
         var dist = 99.0
+        var same = false
         if (b == null || b.buyers.isEmpty()) {
             noBroker(checks, "Pembelian 20 hari terkonsentrasi", true)
         } else {
@@ -379,24 +469,27 @@ object StrategyEngine {
                 share1 >= 0.3 || share3 >= 0.55, "bandar",
             )
             checks += Check(
-                "Harga belum lari (≤25% di atas modal)", "Close ${Fmt.pct(dist)} dari modal $top ${Fmt.price(avg)}",
-                dist <= 25.0, "bandar",
+                "Harga belum lari (≤20% di atas modal)", "Close ${Fmt.pct(dist)} dari modal $top ${Fmt.price(avg)}",
+                dist <= 20.0, "bandar",
             )
             checks += Check(
                 "Barang terkumpul ke sedikit tangan", "${b.sellerCount} penjual vs ${b.buyerCount} pembeli (ideal ≥2x)",
                 concentration >= 2.0, "bandar", false,
             )
             val todayTop3 = d.day?.buyers?.take(3)?.map { it.code } ?: emptyList()
+            same = top in todayTop3
             checks += Check(
                 "Bandar yang sama masih membeli", "Top 3 pembeli hari ini: ${todayTop3.joinToString(", ").ifBlank { "-" }}",
-                top in todayTop3, "bandar", false,
+                same, "bandar", false,
             )
             hl += "Bandar $top ${Fmt.share(share1)}"
             hl += "Modal ${Fmt.price(avg)}"
         }
+        val clean = bandarNotRetail(b, checks, true, "Akumulator bukan ritel")
         hl.add(0, Fmt.pct(st.chg))
         hl += "Vol ${Fmt.ratio(st.volRatio)}"
-        return 25 * min(max(share1 / 0.5, share3 / 0.8), 1.0) + 15 * min(concentration / 4, 1.0) + 20 * min(st.volRatio / 4, 1.0) +
-            15 * st.closePos + 15 * Market.clamp01(1 - max(dist, 0.0) / 25.0) + 10 * min(st.chg / 10, 1.0)
+        return 20 * min(max(share1 / 0.5, share3 / 0.8), 1.0) + 12 * min(concentration / 4, 1.0) + 15 * min(st.volRatio / 4, 1.0) +
+            12 * st.closePos + 13 * Market.clamp01(1 - max(dist, 0.0) / 20.0) + 8 * min(st.chg / 10, 1.0) + 10 * clean +
+            10 * (if (same) 1.0 else 0.0)
     }
 }

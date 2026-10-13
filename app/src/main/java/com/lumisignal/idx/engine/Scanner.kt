@@ -148,7 +148,7 @@ object Scanner {
             progress("Tahap 2 · Analisa bandar", 0, ranked.size, "${ranked.size} kandidat lolos saringan awal")
             runPool(ranked) { sym ->
                 try {
-                    val data = loadStockData(sym, refDate, strategy.needsRange, 26, 3)
+                    val data = loadStockData(sym, refDate, strategy.needsRange, strategy.needsRange5, 26, 3)
                     if (data != null) {
                         val ev = StrategyEngine.evaluate(strategy, data)
                         if (ev.passed) evaluated[sym] = data to ev
@@ -232,7 +232,7 @@ object Scanner {
     }
 
     /** Daily bars up to [refDate] + broker summary of that session (+ 20-session range if needed). */
-    suspend fun loadStockData(symbol: String, refDate: String, needRange: Boolean, bars: Int, pages: Int): StockData? {
+    suspend fun loadStockData(symbol: String, refDate: String, needRange: Boolean, needRange5: Boolean, bars: Int, pages: Int): StockData? {
         val history = Market.completedOnly(Graph.api.history(symbol, bars, pages)).filter { it.date <= refDate }
         if (history.size < 6 || history.last().date != refDate) return null
         val day: BrokerSummary? = try {
@@ -253,7 +253,21 @@ object Scanner {
                 null
             }
         }
-        return StockData(symbol = symbol, bars = history, day = day, range20 = range)
+        var range5: BrokerSummary? = null
+        if (needRange5) range5 = rangeSummary(symbol, history, 5, refDate)
+        return StockData(symbol = symbol, bars = history, day = day, range20 = range, range5 = range5)
+    }
+
+    /** Net broker flow over the last [sessions] sessions ending at [refDate] (null on failure). */
+    private suspend fun rangeSummary(symbol: String, history: List<com.lumisignal.idx.data.Bar>, sessions: Int, refDate: String): BrokerSummary? {
+        val from = history[max(0, history.size - sessions)].date
+        return try {
+            Graph.api.brokerSummary(symbol, from, refDate)
+        } catch (e: AuthExpiredException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun buildSignal(source: String, strategy: Strategy, data: StockData, ev: StrategyEval, refDate: String, linkedId: String? = null, customEntry: Double? = null, startDate: String? = null): Signal {
@@ -275,6 +289,7 @@ object Scanner {
             bars = bars.takeLast(60),
             broker = data.day?.let { it.copy(buyers = it.buyers.take(10), sellers = it.sellers.take(10)) },
             broker20 = data.range20?.let { it.copy(buyers = it.buyers.take(10), sellers = it.sellers.take(10)) },
+            broker5 = data.range5?.let { it.copy(buyers = it.buyers.take(10), sellers = it.sellers.take(10)) },
             linkedId = linkedId,
             customEntry = customEntry,
             startDate = startDate,
@@ -327,6 +342,7 @@ object Scanner {
         } catch (e: Exception) {
             null
         }
+        val range5 = rangeSummary(symbol, bars, 5, refDate)
         val quote = try {
             Graph.api.quote(symbol)
         } catch (e: AuthExpiredException) {
@@ -334,7 +350,7 @@ object Scanner {
         } catch (e: Exception) {
             null
         }
-        val data = StockData(symbol, quote?.name ?: "", bars, day, range)
+        val data = StockData(symbol, quote?.name ?: "", bars, day, range, range5)
         val evals = Strategy.entries.map { StrategyEngine.evaluate(it, data) }
         return ManualResult(symbol, data.name, refDate, data, evals, quote?.price)
     }

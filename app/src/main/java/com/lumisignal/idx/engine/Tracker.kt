@@ -5,9 +5,10 @@ import com.lumisignal.idx.data.Signal
 import com.lumisignal.idx.data.SignalStatus
 
 /**
- * Replays the sessions after a signal against its trade plan. Pure and idempotent: the status is
- * always recomputed from the stored daily bars (final) plus today's live observations (provisional).
- * When one session touches both stop loss and target, stop loss is assumed first (conservative).
+ * Replays the sessions after a signal against its plan (entry → TP or SL). Pure and idempotent:
+ * status is always recomputed from completed daily bars plus today's running bar, whose high and
+ * low are the real intraday extremes from Stockbit (so a TP touched at 10:00 is caught at 12:00).
+ * When one session reaches both SL and TP, SL is assumed first (conservative).
  */
 object Tracker {
 
@@ -33,6 +34,7 @@ object Tracker {
         var note = if (custom != null) "Posisi dibuka di ${Fmt.price(custom)}" else "Menunggu harga masuk area beli"
         var held = 0
         val sl = plan.stopLoss
+        val tp = plan.tp
 
         var idx = 0
         loop@ for (step in steps) {
@@ -41,18 +43,18 @@ object Tracker {
             when (status) {
                 SignalStatus.WAITING -> {
                     val cancel = plan.cancelBelow
-                    if (idx == 1 && !step.live && cancel != null && b.open < cancel - 1e-9) {
+                    if (idx == 1 && cancel != null && b.open > 0 && b.open < cancel - 1e-9) {
                         status = SignalStatus.CANCELLED
                         exitDate = b.date
                         note = "Dibuka ${Fmt.price(b.open)}, di bawah batas batal ${Fmt.price(cancel)}"
                         break@loop
                     }
                     if (b.low <= plan.entryHigh) {
-                        val fill = if (b.open <= plan.entryHigh) b.open else plan.entryHigh
+                        val fill = if (b.open in 0.01..plan.entryHigh) b.open else plan.entryHigh
                         if (fill <= sl) {
                             status = SignalStatus.CANCELLED
                             exitDate = b.date
-                            note = "Harga dibuka di bawah stop loss, sinyal gugur sebelum masuk"
+                            note = "Harga langsung di bawah stop loss, sinyal gugur sebelum masuk"
                             break@loop
                         }
                         entry = fill
@@ -67,17 +69,12 @@ object Tracker {
                             note = "Kena stop loss ${Fmt.price(sl)} di hari yang sama dengan masuk"
                             break@loop
                         }
-                        if (b.open <= plan.entryHigh) {
-                            if (b.high >= plan.tp2) {
-                                status = SignalStatus.TP2
-                                exit = plan.tp2
-                                exitDate = b.date
-                                note = "TP2 ${Fmt.price(plan.tp2)} tercapai"
-                                break@loop
-                            } else if (b.high >= plan.tp1) {
-                                status = SignalStatus.TP1
-                                note = "TP1 ${Fmt.price(plan.tp1)} tercapai — stop loss naik ke harga masuk"
-                            }
+                        if (b.high >= tp) {
+                            status = SignalStatus.TP
+                            exit = tp
+                            exitDate = b.date
+                            note = "TP ${Fmt.price(tp)} tercapai (high ${Fmt.price(b.high)}) pada ${Market.shortDate(b.date)}"
+                            break@loop
                         }
                     } else if (idx >= 2 && !step.live) {
                         status = SignalStatus.CANCELLED
@@ -92,49 +89,21 @@ object Tracker {
                         status = SignalStatus.SL
                         exit = sl
                         exitDate = b.date
-                        note = "Kena stop loss ${Fmt.price(sl)}"
+                        note = "Kena stop loss ${Fmt.price(sl)} (low ${Fmt.price(b.low)}) pada ${Market.shortDate(b.date)}"
                         break@loop
                     }
-                    if (b.high >= plan.tp2) {
-                        status = SignalStatus.TP2
-                        exit = plan.tp2
+                    if (b.high >= tp) {
+                        status = SignalStatus.TP
+                        exit = tp
                         exitDate = b.date
-                        note = "TP2 ${Fmt.price(plan.tp2)} tercapai"
-                        break@loop
-                    }
-                    if (b.high >= plan.tp1) {
-                        status = SignalStatus.TP1
-                        note = "TP1 ${Fmt.price(plan.tp1)} tercapai — stop loss naik ke harga masuk"
-                    } else if (held >= plan.maxHoldDays && !step.live) {
-                        status = SignalStatus.EXPIRED
-                        exit = b.close
-                        exitDate = b.date
-                        note = "Batas ${plan.maxHoldDays} sesi tercapai, ditutup di ${Fmt.price(b.close)}"
-                        break@loop
-                    }
-                }
-                SignalStatus.TP1 -> {
-                    held++
-                    val e = entry ?: plan.entryHigh
-                    if (b.low <= e) {
-                        status = SignalStatus.BE
-                        exit = e
-                        exitDate = b.date
-                        note = "Setelah TP1, harga kembali ke harga masuk (impas untuk sisa posisi)"
-                        break@loop
-                    }
-                    if (b.high >= plan.tp2) {
-                        status = SignalStatus.TP2
-                        exit = plan.tp2
-                        exitDate = b.date
-                        note = "TP2 ${Fmt.price(plan.tp2)} tercapai"
+                        note = "TP ${Fmt.price(tp)} tercapai (high ${Fmt.price(b.high)}) pada ${Market.shortDate(b.date)}"
                         break@loop
                     }
                     if (held >= plan.maxHoldDays && !step.live) {
                         status = SignalStatus.EXPIRED
                         exit = b.close
                         exitDate = b.date
-                        note = "Batas ${plan.maxHoldDays} sesi tercapai setelah TP1, ditutup di ${Fmt.price(b.close)}"
+                        note = "Batas ${plan.maxHoldDays} sesi tercapai, ditutup di ${Fmt.price(b.close)}"
                         break@loop
                     }
                 }
@@ -143,15 +112,12 @@ object Tracker {
         }
 
         val last = steps.lastOrNull()?.bar?.close ?: sig.lastPrice ?: sig.close
-        // TP1-then-breakeven assumes half the position was sold at TP1 and half at the entry price.
-        val e = entry
-        val realizedExit = if (status == SignalStatus.BE && e != null) (plan.tp1 + e) / 2.0 else exit
         return sig.copy(
             status = status,
             statusNote = note,
             entryPrice = entry,
             entryDate = entryDate,
-            exitPrice = realizedExit,
+            exitPrice = exit,
             exitDate = exitDate,
             lastPrice = last,
         )
@@ -160,9 +126,7 @@ object Tracker {
     fun label(s: SignalStatus): String = when (s) {
         SignalStatus.WAITING -> "Menunggu entry"
         SignalStatus.ACTIVE -> "Posisi aktif"
-        SignalStatus.TP1 -> "TP1 tercapai"
-        SignalStatus.TP2 -> "TP2 tercapai"
-        SignalStatus.BE -> "TP1 lalu impas"
+        SignalStatus.TP -> "TP tercapai"
         SignalStatus.SL -> "Stop loss"
         SignalStatus.CANCELLED -> "Batal"
         SignalStatus.EXPIRED -> "Kedaluwarsa"

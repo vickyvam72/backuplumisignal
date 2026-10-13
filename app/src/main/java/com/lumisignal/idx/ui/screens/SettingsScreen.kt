@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,14 +32,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.lumisignal.idx.BuildConfigInfo
 import com.lumisignal.idx.Graph
-import com.lumisignal.idx.service.Monitor
 import com.lumisignal.idx.ui.components.GhostButton
 import com.lumisignal.idx.ui.components.GlassCard
 import com.lumisignal.idx.ui.components.LumiLogo
 import com.lumisignal.idx.ui.components.Pill
 import com.lumisignal.idx.ui.components.SectionHeader
 import com.lumisignal.idx.ui.theme.Lumi
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -49,11 +45,9 @@ import java.util.Locale
 @Composable
 fun SettingsScreen() {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var logoutDialog by remember { mutableStateOf(false) }
     var notif by remember { mutableStateOf(Perms.notifications(ctx)) }
     var bg by remember { mutableStateOf(Perms.background(ctx)) }
-    var monitorMsg by remember { mutableStateOf<String?>(null) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         notif = Perms.notifications(ctx)
         bg = Perms.background(ctx)
@@ -105,22 +99,11 @@ fun SettingsScreen() {
                 "Terakhir memeriksa harga: ${if (lastRun > 0) fmt.format(Date(lastRun)) else "belum pernah"}",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
             )
-            monitorMsg?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall, color = Lumi.Sky)
-            }
-            Spacer(Modifier.height(12.dp))
-            GhostButton("Cek harga sinyal sekarang", {
-                monitorMsg = "Memeriksa…"
-                scope.launch {
-                    monitorMsg = try {
-                        val n = Monitor.runOnce(ctx, forceDaily = true)
-                        if (n > 0) "$n sinyal berubah status" else "Selesai — tidak ada perubahan status"
-                    } catch (e: Exception) {
-                        e.message ?: "Gagal memeriksa"
-                    }
-                }
-            }, Modifier.fillMaxWidth(), icon = Icons.Filled.Refresh)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Harga semua sinyal yang masih berjalan diperiksa otomatis ±15 menit sekali selama bursa buka, memakai high & low harian asli dari Stockbit.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
+            )
             if (!notif || !bg) {
                 Spacer(Modifier.height(8.dp))
                 GhostButton("Perbaiki izin", {
@@ -134,9 +117,9 @@ fun SettingsScreen() {
         Spacer(Modifier.height(8.dp))
         GlassCard(Modifier.fillMaxWidth()) {
             Bullet("Analisa memakai harga closing sesi terakhir yang sudah selesai. Scan Rabu 16:31 memakai closing Rabu; scan Kamis 12:00 tetap memakai closing Rabu.")
-            Bullet("Screening dua tahap: semua saham disaring dari candle harian, lalu maksimal 40 kandidat dianalisa broker summary-nya. Hasil akhir adalah 5 saham dengan skor tertinggi.")
+            Bullet("Screening dua tahap: semua saham disaring dari candle harian, lalu maksimal 50 kandidat dianalisa broker summary-nya. Hasil akhir adalah 5 saham dengan skor tertinggi.")
             Bullet("Stop loss diletakkan di bawah level struktur (low hari sinyal, level breakout, modal bandar, atau VWAP hari ARA), dibatasi 7–10% agar tidak terlalu jauh.")
-            Bullet("Sinyal batal jika harga dibuka di bawah batas batal atau tidak menyentuh area beli dalam 2 sesi. Posisi ditutup otomatis setelah 7–10 sesi.")
+            Bullet("Setiap sinyal punya satu entry, satu TP, dan satu SL. TP dianggap tercapai begitu high harian menyentuh TP. Sinyal batal jika dibuka di bawah batas batal atau tidak menyentuh area beli dalam 2 sesi.")
             Bullet("Winrate dihitung dari sinyal yang selesai: TP = menang, SL = kalah. Sinyal batal tidak dihitung.")
         }
         Spacer(Modifier.height(16.dp))

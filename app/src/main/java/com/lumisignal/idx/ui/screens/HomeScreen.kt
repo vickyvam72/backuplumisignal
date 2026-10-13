@@ -238,10 +238,7 @@ private fun StrategyCard(s: Strategy, total: Int, winRate: Double?, onClick: () 
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill("Risiko ${s.risk}", accent)
-                    Pill(
-                        if (winRate != null) "Winrate ${winRate.toInt()}% · $total sinyal" else if (total > 0) "$total sinyal berjalan" else "Belum ada rapor",
-                        Lumi.TextDim,
-                    )
+                    if (winRate != null) Pill("Winrate ${winRate.toInt()}%", Lumi.Green)
                 }
             }
             Spacer(Modifier.width(8.dp))

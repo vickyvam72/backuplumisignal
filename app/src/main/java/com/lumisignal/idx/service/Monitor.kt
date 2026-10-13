@@ -37,61 +37,49 @@ object Monitor {
         WorkManager.getInstance(ctx).enqueue(OneTimeWorkRequestBuilder<MonitorWorker>().build())
     }
 
-    /** One monitoring pass. Returns the number of signals whose status changed. */
+    /**
+     * One monitoring pass. During the session it reads today's running daily bar (real open/high/low
+     * so far), so a TP or SL touched between two checks is never missed. After the close it reads
+     * the final bars once. Returns the number of signals whose status changed.
+     */
     suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int {
         val open = Graph.history.items.value.filter { it.isOpen }
         if (open.isEmpty() || Graph.session.access == null) return 0
         Graph.api.refreshIfNeeded()
 
-        val symbols = open.map { it.symbol }.distinct()
         val now = Market.now()
         val today = Market.today()
-        val quotes = mutableMapOf<String, Double>()
-        val daily = mutableMapOf<String, List<Bar>>()
+        val inSession = Market.sessionInProgress(now)
+        val key = today + if (inSession) "-s" else "-c"
+        // Outside trading hours one fetch per day is enough; during the session fetch every pass.
+        if (!inSession && !forceDaily && Graph.cache.lastDailyKey == key) return 0
 
-        if (Market.marketOpen(now)) {
-            for (sym in symbols) {
-                try {
-                    Graph.api.quote(sym).price?.let { quotes[sym] = it }
-                } catch (e: AuthExpiredException) {
-                    throw e
-                } catch (e: Exception) {
-                }
+        val symbols = open.map { it.symbol }.distinct()
+        val pages = mutableMapOf<String, List<Bar>>()
+        for (sym in symbols) {
+            try {
+                pages[sym] = Graph.api.historyPage(sym, 1).first
+            } catch (e: AuthExpiredException) {
+                throw e
+            } catch (e: Exception) {
             }
         }
-        val needDaily = forceDaily || !Market.sessionInProgress(now) || open.any { it.trackBars.isEmpty() && it.refDate < today }
-        val dailyKey = today + if (Market.sessionInProgress(now)) "-s" else "-c"
-        if (needDaily && (forceDaily || Graph.cache.lastDailyKey != dailyKey)) {
-            for (sym in symbols) {
-                try {
-                    daily[sym] = Market.completedOnly(Graph.api.historyPage(sym, 1).first)
-                } catch (e: AuthExpiredException) {
-                    throw e
-                } catch (e: Exception) {
-                }
-            }
-            Graph.cache.lastDailyKey = dailyKey
-        }
+        Graph.cache.lastDailyKey = key
 
         var changed = 0
         val updated = mutableListOf<Signal>()
         for (sig in open) {
             var s = sig
-            daily[sig.symbol]?.let { bars ->
+            val page = pages[sig.symbol]
+            if (page != null) {
                 val start = sig.startDate ?: sig.refDate
-                val merged = (s.trackBars + bars.filter { it.date > start })
-                    .associateBy { it.date }.values.sortedBy { it.date }
-                s = s.copy(trackBars = merged)
-                val liveDate = s.live?.date
-                if (liveDate != null && merged.any { it.date >= liveDate }) s = s.copy(live = null)
-            }
-            quotes[sig.symbol]?.let { px ->
-                val lv = s.live
-                s = if (lv != null && lv.date == today) {
-                    s.copy(live = lv.copy(high = maxOf(lv.high, px), low = minOf(lv.low, px), last = px, at = System.currentTimeMillis()))
-                } else {
-                    s.copy(live = LivePoint(today, px, px, px, px, System.currentTimeMillis()))
-                }
+                val completed = Market.completedOnly(page, now).filter { it.date > start }
+                val merged = (s.trackBars + completed).associateBy { it.date }.values.sortedBy { it.date }
+                val running = page.lastOrNull()?.takeIf { inSession && it.date == today && it.date > start }
+                s = s.copy(
+                    trackBars = merged,
+                    live = running?.let { LivePoint(it.date, it.open, it.high, it.low, it.close, System.currentTimeMillis()) },
+                )
             }
             val tracked = Tracker.track(s).copy(lastUpdate = System.currentTimeMillis())
             if (tracked.status != sig.status) {
@@ -103,6 +91,15 @@ object Monitor {
         Graph.history.upsert(updated)
         Graph.cache.lastMonitorRun = System.currentTimeMillis()
         return changed
+    }
+
+    /** Runs a pass in the app's foreground at most every few minutes (no button needed). */
+    suspend fun refreshIfStale(ctx: Context, minGapMs: Long = 3 * 60 * 1000L) {
+        if (System.currentTimeMillis() - Graph.cache.lastMonitorRun < minGapMs) return
+        try {
+            runOnce(ctx)
+        } catch (e: Exception) {
+        }
     }
 }
 

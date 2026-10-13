@@ -102,7 +102,7 @@ fun ResultCard(rank: Int, sig: Signal, inPorto: Boolean, onOpen: () -> Unit, onP
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MiniLevel("BELI", if (plan.entryLow == plan.entryHigh) Fmt.price(plan.entryHigh) else "${Fmt.price(plan.entryLow)}–${Fmt.price(plan.entryHigh)}", Lumi.Blue, Modifier.weight(1.3f))
                 MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
-                MiniLevel("TP1", Fmt.price(plan.tp1), Lumi.Green, Modifier.weight(1f))
+                MiniLevel("TP", Fmt.price(plan.tp), Lumi.Green, Modifier.weight(1f))
             }
         }
         if (sig.eval.lowLiquidity) {
@@ -178,8 +178,7 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MiniLevel("ENTRY", Fmt.price(sig.entryPrice ?: plan.entryHigh), Lumi.Blue, Modifier.weight(1f))
                 MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
-                MiniLevel("TP1", Fmt.price(plan.tp1), Lumi.Green, Modifier.weight(1f))
-                MiniLevel("TP2", Fmt.price(plan.tp2), Lumi.Green, Modifier.weight(1f))
+                MiniLevel("TP", Fmt.price(plan.tp), Lumi.Green, Modifier.weight(1f))
             }
         }
         if (sig.statusNote.isNotBlank()) {

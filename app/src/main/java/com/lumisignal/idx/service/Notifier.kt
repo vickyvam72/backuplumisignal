@@ -85,10 +85,9 @@ object Notifier {
         if (!canNotify(ctx)) return
         val porto = if (sig.source == "PORTO") " · Porto" else ""
         val emoji = when (sig.status) {
-            SignalStatus.TP1, SignalStatus.TP2 -> "🎯"
+            SignalStatus.TP -> "🎯"
             SignalStatus.SL -> "🛑"
             SignalStatus.ACTIVE -> "✅"
-            SignalStatus.BE -> "⚖️"
             SignalStatus.CANCELLED -> "✖️"
             else -> "🔔"
         }

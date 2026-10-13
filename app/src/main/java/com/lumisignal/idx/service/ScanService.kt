@@ -60,7 +60,11 @@ class ScanService : Service() {
                     if (ids.isEmpty()) "Tidak ada saham yang memenuhi semua syarat hari ini."
                     else "${ids.size} saham terbaik: ${ids.joinToString(", ") { id -> id.split("-").getOrNull(1) ?: id }}",
                 )
-                Monitor.runNow(applicationContext)
+                try {
+                    // Check fresh signals right away: during the session today's high/low may already hit TP/SL.
+                    Monitor.runOnce(applicationContext, forceDaily = true)
+                } catch (e: Exception) {
+                }
             } catch (e: Exception) {
                 Notifier.scanDone(this@ScanService, "Screening gagal", e.message ?: "Terjadi kesalahan")
             } finally {

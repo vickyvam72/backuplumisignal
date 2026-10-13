@@ -51,8 +51,7 @@ fun PlanPanel(plan: TradePlan, modifier: Modifier = Modifier, entryPrice: Double
     val ref = entryPrice ?: plan.entryHigh
     fun dist(p: Double) = Fmt.pct(Market.pct(p, ref))
     Column(modifier) {
-        PlanRow("TP 2", Fmt.price(plan.tp2), dist(plan.tp2), Lumi.Green, plan.tp2Reason)
-        PlanRow("TP 1", Fmt.price(plan.tp1), dist(plan.tp1), Lumi.Green, plan.tp1Reason)
+        PlanRow("TAKE PROFIT", Fmt.price(plan.tp), dist(plan.tp), Lumi.Green, plan.tpReason)
         PlanRow(
             if (entryPrice != null) "MASUK" else "AREA BELI",
             if (entryPrice != null) Fmt.price(entryPrice)
@@ -64,7 +63,7 @@ fun PlanPanel(plan: TradePlan, modifier: Modifier = Modifier, entryPrice: Double
         PlanRow("STOP LOSS", Fmt.price(plan.stopLoss), dist(plan.stopLoss), Lumi.Red, plan.slReason, last = true)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Pegang maksimal ${plan.maxHoldDays} sesi. Setelah TP1 tercapai, stop loss dinaikkan ke harga masuk.",
+            "Pegang maksimal ${plan.maxHoldDays} sesi. Jual di TP, atau keluar disiplin di stop loss.",
             style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
         )
     }
@@ -96,19 +95,30 @@ fun ChecksPanel(checks: List<Check>, kind: String, modifier: Modifier = Modifier
     val list = checks.filter { it.kind == kind }
     Column(modifier) {
         list.forEach { c ->
+            val tint = when {
+                c.pass -> Lumi.Green
+                c.required -> Lumi.Red
+                else -> Lumi.TextMuted
+            }
             Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
                 Box(
-                    Modifier.size(20.dp).clip(CircleShape).background(if (c.pass) Lumi.Green.copy(alpha = 0.18f) else Lumi.Red.copy(alpha = 0.18f)),
+                    Modifier.size(20.dp).clip(CircleShape).background(tint.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         if (c.pass) Icons.Filled.Check else Icons.Filled.Close, null,
-                        tint = if (c.pass) Lumi.Green else Lumi.Red, modifier = Modifier.size(13.dp),
+                        tint = tint, modifier = Modifier.size(13.dp),
                     )
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(c.label, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(c.label, style = MaterialTheme.typography.titleSmall, color = Lumi.Text, modifier = Modifier.weight(1f, fill = false))
+                        if (!c.required) {
+                            Spacer(Modifier.width(6.dp))
+                            Text("BONUS", style = MaterialTheme.typography.labelSmall, color = Lumi.Amber)
+                        }
+                    }
                     Text(c.detail, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 }
             }

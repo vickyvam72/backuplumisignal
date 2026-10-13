@@ -1,5 +1,6 @@
 package com.lumisignal.idx.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /** One daily session. Volume is in lots (Stockbit convention), value in IDR. */
@@ -85,6 +86,8 @@ data class Check(
     val pass: Boolean,
     /** "bandar" or "teknikal" — which evidence family this criterion belongs to. */
     val kind: String = "teknikal",
+    /** Required criteria decide the signal; optional ones only add to the score. */
+    val required: Boolean = true,
 )
 
 @Serializable
@@ -95,10 +98,8 @@ data class TradePlan(
     val cancelReason: String = "",
     val stopLoss: Double,
     val slReason: String,
-    val tp1: Double,
-    val tp1Reason: String,
-    val tp2: Double,
-    val tp2Reason: String,
+    @SerialName("tp1") val tp: Double,
+    @SerialName("tp1Reason") val tpReason: String,
     val maxHoldDays: Int = 10,
 )
 
@@ -115,7 +116,7 @@ data class StrategyEval(
 )
 
 @Serializable
-enum class SignalStatus { WAITING, ACTIVE, TP1, TP2, BE, SL, CANCELLED, EXPIRED }
+enum class SignalStatus { WAITING, ACTIVE, TP, SL, CANCELLED, EXPIRED }
 
 @Serializable
 data class LivePoint(
@@ -162,7 +163,7 @@ data class Signal(
     val lastUpdate: Long = 0L,
 ) {
     val isOpen: Boolean
-        get() = status == SignalStatus.WAITING || status == SignalStatus.ACTIVE || status == SignalStatus.TP1
+        get() = status == SignalStatus.WAITING || status == SignalStatus.ACTIVE
 
     /** Profit/loss % of a filled trade at exit (closed) or last price (open). */
     val pnlPct: Double?
@@ -176,14 +177,13 @@ data class Signal(
     /** true = win, false = loss, null = not decided / not counted. */
     val outcome: Boolean?
         get() = when (status) {
-            SignalStatus.TP1, SignalStatus.TP2, SignalStatus.BE -> if (status == SignalStatus.TP1) null else true
+            SignalStatus.TP -> true
             SignalStatus.SL -> false
             SignalStatus.EXPIRED -> (pnlPct ?: 0.0) > 0.0
             else -> null
         }
 
-    /** A trade that reached TP1 is already counted as a win even while it is still running. */
-    val countsAsWin: Boolean get() = outcome == true || status == SignalStatus.TP1
+    val countsAsWin: Boolean get() = outcome == true
     val countsAsLoss: Boolean get() = outcome == false
 }
 

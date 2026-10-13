@@ -37,7 +37,7 @@ private val MA20 = Color(0xFFFFC14D)
 
 /**
  * Daily candlestick chart with volume, MA5/MA20 and the trade plan drawn on top
- * (entry band, stop loss, TP1, TP2). The signal session is highlighted.
+ * (entry band, stop loss, take profit). The signal session is highlighted.
  */
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -69,7 +69,7 @@ fun CandleChart(
         var hi = view.maxOf { it.high }
         if (plan != null) {
             lo = min(lo, plan.stopLoss)
-            hi = max(hi, plan.tp2)
+            hi = max(hi, plan.tp)
         }
         val pad = (hi - lo) * 0.06 + 0.0001
         lo -= pad
@@ -138,8 +138,7 @@ fun CandleChart(
 
         // plan lines
         if (plan != null) {
-            planLine(measurer, py(plan.tp2), chartW, Lumi.Green, "TP2 ${Fmt.price(plan.tp2)}")
-            planLine(measurer, py(plan.tp1), chartW, Lumi.Green, "TP1 ${Fmt.price(plan.tp1)}")
+            planLine(measurer, py(plan.tp), chartW, Lumi.Green, "TP ${Fmt.price(plan.tp)}")
             planLine(measurer, py(plan.entryHigh), chartW, Lumi.Blue, "BUY ${Fmt.price(plan.entryHigh)}")
             planLine(measurer, py(plan.stopLoss), chartW, Lumi.Red, "SL ${Fmt.price(plan.stopLoss)}")
         }

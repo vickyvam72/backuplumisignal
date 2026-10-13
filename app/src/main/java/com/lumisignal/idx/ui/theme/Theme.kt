@@ -38,7 +38,7 @@ object Lumi {
 
     fun strategyColor(id: Int): Color = when (id) {
         1 -> Color(0xFFFF9F43)
-        2 -> Color(0xFF3DDCFF)
+        2 -> Color(0xFF26C6F9)
         3 -> Color(0xFFFF5C8A)
         4 -> Color(0xFF2BD9A0)
         5 -> Color(0xFFB98BFF)
@@ -54,7 +54,7 @@ object Lumi {
     fun statusColor(s: SignalStatus): Color = when (s) {
         SignalStatus.WAITING -> Sky
         SignalStatus.ACTIVE -> Blue
-        SignalStatus.TP1, SignalStatus.TP2, SignalStatus.BE -> Green
+        SignalStatus.TP -> Green
         SignalStatus.SL -> Red
         SignalStatus.CANCELLED -> TextMuted
         SignalStatus.EXPIRED -> Amber

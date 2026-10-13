@@ -29,6 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,6 +87,7 @@ fun AppRoot() {
 @Composable
 private fun MainNav() {
     val nav = rememberNavController()
+    val scope = rememberCoroutineScope()
     val pending by PendingNav.collectAsStateWithLifecycle()
     LaunchedEffect(pending) {
         val route = pending ?: return@LaunchedEffect
@@ -91,6 +96,11 @@ private fun MainNav() {
             nav.navigate(route) { launchSingleTop = true }
         } catch (e: Exception) {
         }
+    }
+    val ctx = LocalContext.current
+    // Whenever the app comes to the foreground, refresh open signals (throttled) — no manual button.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        scope.launch { Monitor.refreshIfStale(ctx) }
     }
     NavHost(nav, startDestination = "tabs", modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         composable("tabs") { TabsScreen(nav) }

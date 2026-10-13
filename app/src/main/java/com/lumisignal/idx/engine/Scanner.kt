@@ -62,7 +62,6 @@ data class ManualResult(
 )
 
 object Scanner {
-    private const val STAGE2_LIMIT = 40
     private const val TOP_N = 5
     private const val UNIVERSE_TTL = 7L * 24 * 3600 * 1000
 
@@ -139,7 +138,7 @@ object Scanner {
                 .filter { (_, bars) -> bars.isNotEmpty() && bars.last().date == refDate }
                 .mapNotNull { (sym, bars) -> StrategyEngine.prefilter(strategy, bars)?.let { sym to it } }
                 .sortedByDescending { it.second }
-                .take(STAGE2_LIMIT)
+                .take(StrategyEngine.STAGE2_LIMIT)
                 .map { it.first }
             ScanManager.update { it.copy(candidates = ranked.size) }
 

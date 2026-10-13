@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import com.lumisignal.idx.R
 import com.lumisignal.idx.data.SignalStatus
 import com.lumisignal.idx.engine.Tracker
 import com.lumisignal.idx.ui.theme.Lumi
@@ -106,43 +109,14 @@ fun GlassCard(
     Column(m.padding(padding), content = content)
 }
 
-private fun DrawScope.drawLogoGlyph(color: Color) {
-    val s = size.minDimension
-    // Map the 108-unit adaptive-icon artwork (visible radius ~40) onto this canvas.
-    fun x(v: Float) = (v - 54f) / 40f * (s / 2f) + s / 2f
-    fun y(v: Float) = (v - 54f) / 40f * (s / 2f) + s / 2f
-    val k = s / 80f
-    drawCircle(color, radius = 22.5f * k, center = Offset(x(54f), y(56f)), style = Stroke(width = 4.6f * k))
-    val line = Path().apply {
-        moveTo(x(42.5f), y(65f)); lineTo(x(50.5f), y(56f)); lineTo(x(56.5f), y(61f)); lineTo(x(66f), y(49.5f))
-    }
-    drawPath(line, color, style = Stroke(4.6f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-    val head = Path().apply { moveTo(x(59.5f), y(49f)); lineTo(x(66.3f), y(49.2f)); lineTo(x(66.5f), y(56f)) }
-    drawPath(head, color, style = Stroke(4.6f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-    val star = Path().apply {
-        moveTo(x(73f), y(28.5f))
-        quadraticBezierTo(x(73.9f), y(36.1f), x(81.5f), y(37f))
-        quadraticBezierTo(x(73.9f), y(37.9f), x(73f), y(45.5f))
-        quadraticBezierTo(x(72.1f), y(37.9f), x(64.5f), y(37f))
-        quadraticBezierTo(x(72.1f), y(36.1f), x(73f), y(28.5f))
-        close()
-    }
-    drawPath(star, color)
-}
-
-/** The app logo: sky-to-blue gradient disc with the white rising-signal glyph and sparkle. */
+/** The app logo: white disc with the sky-to-blue gradient "S". */
 @Composable
 fun LumiLogo(size: Dp, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(size)) {
-        drawCircle(Lumi.Blue.copy(alpha = 0.35f), radius = this.size.minDimension / 2f * 1.06f)
-        drawCircle(
-            Brush.linearGradient(
-                listOf(Color(0xFF9EDCFF), Color(0xFF5AA6F7), Color(0xFF2A66EE)),
-                start = Offset(0f, 0f), end = Offset(this.size.width, this.size.height),
-            ),
-        )
-        drawLogoGlyph(Color.White)
-    }
+    Image(
+        painter = painterResource(R.drawable.lumi_logo),
+        contentDescription = "Lumi Signal IDX",
+        modifier = modifier.size(size),
+    )
 }
 
 /** Four-point sparkle, the brand's accent mark. */
@@ -345,7 +319,7 @@ fun EmptyState(title: String, body: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Small round badge with the strategy number in its accent colour. */
+/** Rounded tile with the strategy's own symbol in its accent colour. */
 @Composable
 fun StrategyBadge(id: Int, size: Dp = 34.dp) {
     val c = Lumi.strategyColor(id)
@@ -353,9 +327,9 @@ fun StrategyBadge(id: Int, size: Dp = 34.dp) {
         Modifier
             .size(size)
             .clip(RoundedCornerShape(size * 0.32f))
-            .background(Brush.linearGradient(listOf(c.copy(alpha = 0.9f), c.copy(alpha = 0.45f)))),
+            .background(Brush.linearGradient(listOf(c, c.copy(alpha = 0.55f)))),
         contentAlignment = Alignment.Center,
     ) {
-        Text("S$id", style = NumberStyle.copy(fontSize = (size.value * 0.36f).sp, fontWeight = FontWeight.Bold), color = Lumi.Bg)
+        StrategyIcon(id, size * 0.62f, Color.White)
     }
 }

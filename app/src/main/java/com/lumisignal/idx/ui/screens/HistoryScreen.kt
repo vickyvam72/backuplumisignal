@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,16 +51,14 @@ import com.lumisignal.idx.ui.components.EmptyState
 import com.lumisignal.idx.ui.components.WinStatsCard
 import com.lumisignal.idx.ui.components.winStats
 import com.lumisignal.idx.ui.theme.Lumi
-import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(onOpenSignal: (String) -> Unit) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     val items by Graph.history.items.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var filter by rememberSaveable { mutableIntStateOf(0) }
-    var refreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { Monitor.refreshIfStale(ctx) }
 
     val strategyItems = items.filter { it.source == SOURCE_STRATEGY }
     val portoItems = items.filter { it.source == SOURCE_PORTO }
@@ -72,22 +71,6 @@ fun HistoryScreen(onOpenSignal: (String) -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("Riwayat", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
                 Text("Audit setiap sinyal & ukur winrate", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
-            }
-            Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(Lumi.SurfaceHi).clickable(enabled = !refreshing) {
-                    refreshing = true
-                    scope.launch {
-                        try {
-                            Monitor.runOnce(ctx, forceDaily = true)
-                        } catch (e: Exception) {
-                        }
-                        refreshing = false
-                    }
-                },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (refreshing) CircularProgressIndicator(color = Lumi.Sky, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                else Icon(Icons.Filled.Refresh, "Perbarui harga", tint = Lumi.Sky)
             }
         }
         Spacer(Modifier.height(14.dp))

@@ -161,7 +161,7 @@ private fun StrategyResultCard(ev: StrategyEval, onDetail: () -> Unit, onPorto: 
                 Spacer(Modifier.height(4.dp))
                 val passed = ev.checks.count { it.pass }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Pill(if (ev.passed) "SINYAL BELI" else "Tidak memenuhi", if (ev.passed) Lumi.Green else Lumi.TextDim, filled = ev.passed)
+                    if (ev.passed) Pill("SINYAL BELI", Lumi.Green, filled = true)
                     Pill("$passed/${ev.checks.size} syarat", accent)
                 }
             }
@@ -182,8 +182,7 @@ private fun StrategyResultCard(ev: StrategyEval, onDetail: () -> Unit, onPorto: 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     MiniLevel("BELI", Fmt.price(plan.entryHigh), Lumi.Blue, Modifier.weight(1f))
                     MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
-                    MiniLevel("TP1", Fmt.price(plan.tp1), Lumi.Green, Modifier.weight(1f))
-                    MiniLevel("TP2", Fmt.price(plan.tp2), Lumi.Green, Modifier.weight(1f))
+                    MiniLevel("TP", Fmt.price(plan.tp), Lumi.Green, Modifier.weight(1f))
                 }
             }
             Spacer(Modifier.height(12.dp))

@@ -1,51 +1,125 @@
-name: Market snapshot
+name: Validate prices
+
 on:
   push:
     branches: [data-request]
+  workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
-  history:
+  validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
-      - name: Get ticker list
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install curl_cffi websocket-client pandas requests
+      - name: IDX daily stock summary
+        continue-on-error: true
         run: |
-          git clone -q --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
-          cut -d, -f1 data/snapshots/latest.csv | tail -n +2 > tickers.txt
-          wc -l tickers.txt
-      - name: Fetch 1 year of daily bars from Yahoo Finance
-        run: |
-          python3 - <<'PY'
-          import json, urllib.request, datetime, concurrent.futures, time
-          tickers = [t.strip() for t in open("tickers.txt") if t.strip()]
-          def fetch(t):
-              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}.JK?range=1y&interval=1d"
+          mkdir -p out
+          python - <<'PY'
+          import json, time, csv
+          from curl_cffi import requests
+          s = requests.Session(impersonate="chrome")
+          dates = [d.strip() for d in open('dates.txt') if d.strip()]
+          rows = []; log = []
+          try:
+              r0 = s.get("https://www.idx.co.id/id/data-pasar/ringkasan-perdagangan/ringkasan-saham/", timeout=30)
+              log.append(f"home {r0.status_code}")
+          except Exception as e:
+              log.append(f"home err {e}")
+          for d in dates:
+              ds = d.replace('-', '')
+              url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={ds}"
+              ok = False
               for attempt in range(3):
                   try:
-                      req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                      r = json.load(urllib.request.urlopen(req, timeout=30))["chart"]["result"][0]
-                      q = r["indicators"]["quote"][0]
+                      r = s.get(url, timeout=30, headers={"Referer": "https://www.idx.co.id/id/data-pasar/ringkasan-perdagangan/ringkasan-saham/", "Accept": "application/json"})
+                      if r.status_code == 200:
+                          j = r.json()
+                          for it in j.get('data', []):
+                              rows.append(dict(date=d, ticker=it.get('StockCode'), prev=it.get('Previous'), open=it.get('OpenPrice'), high=it.get('High'),
+                                               low=it.get('Low'), close=it.get('Close'), volume=it.get('Volume'), value=it.get('Value'), freq=it.get('Frequency')))
+                          log.append(f"{d} {r.status_code} {len(j.get('data', []))}"); ok = True; break
+                      log.append(f"{d} status {r.status_code} {r.text[:120]!r}")
+                  except Exception as e:
+                      log.append(f"{d} err {e}")
+                  time.sleep(2)
+              time.sleep(0.4)
+              if not ok and len([l for l in log if 'status' in l or 'err' in l]) > 15 and not rows:
+                  log.append("giving up IDX"); break
+          with open('out/idx_daily.csv', 'w', newline='') as f:
+              w = csv.DictWriter(f, fieldnames=['date','ticker','prev','open','high','low','close','volume','value','freq']); w.writeheader(); w.writerows(rows)
+          open('out/idx_log.txt', 'w').write('\n'.join(log))
+          print(len(rows), 'rows'); print('\n'.join(log[:20]))
+          PY
+      - name: TradingView daily history
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json, random, string, re, csv, time
+          from concurrent.futures import ThreadPoolExecutor
+          from websocket import create_connection
+          def gen(p): return p + ''.join(random.choice(string.ascii_lowercase) for _ in range(12))
+          def msg(f, p):
+              m = json.dumps({"m": f, "p": p}, separators=(',', ':'))
+              return "~m~" + str(len(m)) + "~m~" + m
+          def fetch(sym, n=300):
+              for attempt in range(3):
+                  try:
+                      ws = create_connection("wss://data.tradingview.com/socket.io/websocket", header=["Origin: https://data.tradingview.com"], timeout=20)
+                      cs = gen("cs_")
+                      ws.send(msg("set_auth_token", ["unauthorized_user_token"]))
+                      ws.send(msg("chart_create_session", [cs, ""]))
+                      ws.send(msg("resolve_symbol", [cs, "symbol_1", '={"symbol":"IDX:%s","adjustment":"splits","session":"regular"}' % sym]))
+                      ws.send(msg("create_series", [cs, "s1", "s1", "symbol_1", "1D", n]))
+                      raw = ""
+                      t0 = time.time()
+                      while time.time() - t0 < 20:
+                          x = ws.recv(); raw += x
+                          if "series_completed" in x or "symbol_error" in x: break
+                          if x.startswith("~m~") and "~h~" in x: ws.send(x)
+                      ws.close()
                       out = []
-                      for i, ts in enumerate(r.get("timestamp") or []):
-                          c = q["close"][i]
-                          if c is None: continue
-                          d = datetime.datetime.utcfromtimestamp(ts + 7*3600).strftime("%Y-%m-%d")
-                          out.append(f"{d},{t},{q['open'][i]},{q['high'][i]},{q['low'][i]},{c},{q['volume'][i]}")
+                      for m in re.findall(r'"s":\[(.*?)\}\]', raw):
+                          for b in re.findall(r'\{"i":\d+,"v":\[(.*?)\]', m + '}]'):
+                              v = b.split(',')
+                              if len(v) >= 5: out.append(v[:6])
                       return out
                   except Exception as e:
-                      time.sleep(1 + attempt)
+                      time.sleep(1)
               return []
-          lines, ok = [], 0
-          with concurrent.futures.ThreadPoolExecutor(8) as ex:
-              for res in ex.map(fetch, tickers):
-                  if res: ok += 1
-                  lines += res
-          with open("data/yahoo_1y.csv", "w") as f:
-              f.write("date,ticker,open,high,low,close,volume\n" + "\n".join(lines) + "\n")
-          print(f"tickers ok {ok}/{len(tickers)}, rows {len(lines)}")
+          tick = [t.strip() for t in open('tickers.txt') if t.strip()]
+          rows = []; empty = []
+          def job(t):
+              bars = fetch(t)
+              return t, bars
+          with ThreadPoolExecutor(8) as ex:
+              for t, bars in ex.map(job, tick):
+                  if not bars: empty.append(t)
+                  for v in bars:
+                      ts = float(v[0]); d = time.strftime('%Y-%m-%d', time.gmtime(ts + 7*3600))
+                      rows.append(dict(date=d, ticker=t, open=v[1], high=v[2], low=v[3], close=v[4], volume=v[5] if len(v) > 5 else ''))
+          with open('out/tv_daily.csv', 'w', newline='') as f:
+              w = csv.DictWriter(f, fieldnames=['date','ticker','open','high','low','close','volume']); w.writeheader(); w.writerows(rows)
+          open('out/tv_log.txt', 'w').write(f"rows={len(rows)} tickers={len(tick)} empty={len(empty)}\n" + ' '.join(empty))
+          print(len(rows), 'rows', len(empty), 'empty')
           PY
-      - name: Save
+      - name: Save to market-data branch
+        if: always()
         run: |
+          git config --global user.name "lumi-ci"
+          git config --global user.email "lumi-ci@users.noreply.github.com"
+          git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
+          mkdir -p data/validation
+          cp out/* data/validation/ || true
           cd data
-          git config user.name lumi-ci; git config user.email lumi-ci@users.noreply.github.com
-          git add -A; git commit -qm "Yahoo 1-year daily history"; git push -q origin HEAD:market-data
+          git add -A
+          git commit -qm "Validation data $(date -u +%FT%TZ)" || echo "no change"
+          git push -q origin HEAD:market-data

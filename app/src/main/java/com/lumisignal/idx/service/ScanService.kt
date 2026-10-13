@@ -58,7 +58,7 @@ class ScanService : Service() {
                     this@ScanService,
                     "Screening selesai · ${strategy.title}",
                     if (ids.isEmpty()) "Tidak ada saham yang memenuhi semua syarat hari ini."
-                    else "${ids.size} saham terbaik: ${ids.joinToString(", ") { it.split("-").getOrElse(1) { it } }}",
+                    else "${ids.size} saham terbaik: ${ids.joinToString(", ") { id -> id.split("-").getOrNull(1) ?: id }}",
                 )
                 Monitor.runNow(applicationContext)
             } catch (e: Exception) {

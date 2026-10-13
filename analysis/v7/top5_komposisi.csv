@@ -1,0 +1,51 @@
+jenis,tier,id,strategi,trades,winrate,akumulasi_pl
+profit,semua,1,Squeeze di MA20,464,55.2,1272.6
+profit,semua,2,Pantulan Hijau,77,62.3,690.2
+profit,semua,3,Engulfing Oversold,76,44.7,180.4
+profit,semua,4,Squeeze Meledak dari Dasar,15,20.0,-68.9
+profit,semua,5,Jual Panik Beruntun,129,32.6,292.2
+profit,250jt,1,Squeeze di MA20,455,51.6,1321.6
+profit,250jt,2,Pantulan Hijau,64,54.7,427.8
+profit,250jt,6,Pantulan Pasar Panik,88,50.0,322.2
+profit,250jt,7,Squeeze Naik Beruntun,20,30.0,-47.0
+profit,250jt,8,Engulfing di Tren Turun,80,42.5,151.5
+profit,1M,5,Jual Panik Beruntun,121,48.8,361.1
+profit,1M,7,Squeeze Naik Beruntun,81,63.0,372.9
+profit,1M,8,Engulfing di Tren Turun,66,45.5,246.0
+profit,1M,9,Squeeze Higher Low,155,42.6,188.1
+profit,1M,10,Kering + Ekor Bawah,114,42.1,361.1
+profit,5M,3,Engulfing Oversold,49,49.0,169.4
+profit,5M,4,Squeeze Meledak dari Dasar,117,51.3,408.7
+profit,5M,8,Engulfing di Tren Turun,6,33.3,-1.9
+profit,5M,11,Gap Turun Tutup Lemah,101,44.6,631.1
+profit,5M,12,Reversal dari Dasar,35,40.0,50.2
+profit,20M,8,Engulfing di Tren Turun,25,60.0,174.4
+profit,20M,10,Kering + Ekor Bawah,31,51.6,222.7
+profit,20M,12,Reversal dari Dasar,33,69.7,266.4
+profit,20M,13,Kering di MA20 setelah Koreksi,103,51.5,340.3
+profit,20M,14,Oversold Volume Besar,67,25.4,121.3
+winrate,semua,101,Naik Beruntun dari Oversold,45,88.9,84.4
+winrate,semua,102,Pullback setelah Koreksi Dalam,128,80.5,288.2
+winrate,semua,103,Higher Low Sangat Oversold,105,73.3,75.4
+winrate,semua,104,Engulfing Tutup Lemah,50,74.0,18.1
+winrate,semua,105,Reversal Murah,49,75.5,15.0
+winrate,250jt,102,Pullback setelah Koreksi Dalam,116,85.3,200.6
+winrate,250jt,105,Reversal Murah,36,72.2,4.0
+winrate,250jt,106,Squeeze Digoyang Gap Turun,55,72.7,44.2
+winrate,250jt,107,Gap Turun Sangat Oversold,73,76.7,70.6
+winrate,250jt,108,Engulfing Oversold,50,70.0,-11.8
+winrate,1M,102,Pullback setelah Koreksi Dalam,97,82.5,145.8
+winrate,1M,103,Higher Low Sangat Oversold,64,78.1,57.6
+winrate,1M,105,Reversal Murah,36,80.6,46.0
+winrate,1M,107,Gap Turun Sangat Oversold,56,76.8,74.5
+winrate,1M,109,Gap Turun Tutup Lemah,76,72.4,27.7
+winrate,5M,102,Pullback setelah Koreksi Dalam,61,83.6,151.4
+winrate,5M,110,Sangat Oversold Murah,68,82.4,110.2
+winrate,5M,111,Reversal setelah Koreksi,45,73.3,70.5
+winrate,5M,112,Naik Beruntun setelah Koreksi,121,78.5,244.2
+winrate,5M,113,Gap Turun Range Sempit,69,76.8,352.2
+winrate,20M,112,Naik Beruntun setelah Koreksi,112,80.4,209.1
+winrate,20M,114,Reversal di Dasar,45,80.0,73.6
+winrate,20M,115,Naik Beruntun dari Dasar,44,63.6,-16.0
+winrate,20M,116,Ekor Bawah Range Sempit,79,79.7,61.0
+winrate,20M,117,Engulfing setelah Koreksi Dalam,18,66.7,-4.8

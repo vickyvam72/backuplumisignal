@@ -1,0 +1,6 @@
+tier,label,minimal_rp,saham_terakhir
+semua,Tanpa minimal,0.0,739
+250jt,≥ Rp250 juta,250000000.0,513
+1M,≥ Rp1 miliar,1000000000.0,364
+5M,≥ Rp5 miliar,5000000000.0,217
+20M,≥ Rp20 miliar,20000000000.0,92

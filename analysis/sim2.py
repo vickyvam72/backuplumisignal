@@ -25,7 +25,7 @@ def prep(df, H=7):
             F[(c, k)] = g[c].shift(-k).to_numpy()
     return df, F
 
-def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, path='ohlc'):
+def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, path='ohlc', tp_px=None, sl_px=None, sl_cap=(0.03, 0.10)):
     m = np.asarray(mask)
     c0 = df['close'].to_numpy()
     o1, h1, l1 = F[('open', 1)], F[('high', 1)], F[('low', 1)]
@@ -38,18 +38,36 @@ def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, p
         lim = np.floor(lim / tick(lim)) * tick(lim)
         filled = o1 <= lim
         e = o1.copy()
+    elif mode.startswith('zone'):
+        # buy zone [.. , close*(1+k)]: at the open if it opens inside/below the zone,
+        # otherwise a limit at the zone top that fills if price comes back during the day
+        k = float(mode[4:]) / 100
+        top = c0 * (1 + k)
+        top = np.floor(top / tick(top)) * tick(top)
+        top = np.maximum(top, c0)
+        at_open = o1 <= top
+        filled = at_open | (l1 <= top)
+        e = np.where(at_open, o1, top)
+        intraday_fill = ~at_open & filled
     else:
         k = float(mode[3:]) / 100
         lim = c0 * (1 - k)
         lim = np.floor(lim / tick(lim)) * tick(lim)
         filled = l1 <= lim
         e = np.where(o1 <= lim, o1, lim)
+    if not mode.startswith('zone'):
+        intraday_fill = np.zeros(len(c0), bool) if not mode.startswith('lim') else ~(o1 <= lim)
     locked = (h1 == l1) & (o1 >= c0 * 1.15)
     ok = m & filled & ~locked & (e > 0)
     if max_gap is not None:
         ok &= (o1 / c0 - 1) <= max_gap
-    tp = np.broadcast_to(np.asarray(tp, dtype=float), e.shape)
-    sl = np.broadcast_to(np.asarray(sl, dtype=float), e.shape)
+    tp = np.broadcast_to(np.asarray(tp, dtype=float), e.shape).copy()
+    sl = np.broadcast_to(np.asarray(sl, dtype=float), e.shape).copy()
+    with np.errstate(invalid='ignore', divide='ignore'):
+        if sl_px is not None:   # structural stop price -> % from the actual entry, kept inside the cap
+            sl = np.clip(1 - np.asarray(sl_px) / e, sl_cap[0], sl_cap[1])
+        if tp_px is not None:
+            tp = np.clip(np.asarray(tp_px) / e - 1, 0.03, 0.25)
     tpp, slp = e * (1 + tp), e * (1 - sl)
     res = np.full(len(df), np.nan)
     done = ~ok
@@ -62,15 +80,17 @@ def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, p
             gtp = act & (o >= tpp); res[gtp] = o[gtp] / e[gtp] - 1; done |= gtp; act &= ~gtp
         if path == 'pess':
             hs = act & (l <= slp); res[hs] = -sl[hs]; done |= hs; act &= ~hs
-            if k == 1 and mode.startswith('lim'):
-                ht = act & (c >= tpp); res[ht] = c[ht] / e[ht] - 1
+            if k == 1:
+                ht1 = act & intraday_fill & (c >= tpp); res[ht1] = c[ht1] / e[ht1] - 1
+                ht2 = act & ~intraday_fill & (h >= tpp); res[ht2] = tp[ht2]
+                ht = ht1 | ht2
             else:
                 ht = act & (h >= tpp); res[ht] = tp[ht]
             done |= ht; act &= ~ht
         else:
             # OHLC path model: green bar = O->L->H->C, red bar = O->H->L->C
             bull = c >= o
-            fillday_bear = (k == 1) & (mode.startswith('lim')) & ~bull   # high printed before the fill
+            fillday_bear = (k == 1) & intraday_fill & ~bull   # high printed before the fill
             # bullish: low first
             hs = act & bull & (l <= slp); res[hs] = -sl[hs]; done |= hs; act &= ~hs
             ht = act & bull & (h >= tpp); res[ht] = tp[ht]; done |= ht; act &= ~ht

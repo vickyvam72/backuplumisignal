@@ -25,7 +25,7 @@ def prep(df, H=7):
             F[(c, k)] = g[c].shift(-k).to_numpy()
     return df, F
 
-def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, path='ohlc', tp_px=None, sl_px=None, sl_cap=(0.03, 0.10)):
+def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, path='ohlc', tp_px=None, sl_px=None, sl_cap=(0.03, 0.10), tp_cap=(0.03, 0.25), return_exit=False):
     m = np.asarray(mask)
     c0 = df['close'].to_numpy()
     o1, h1, l1 = F[('open', 1)], F[('high', 1)], F[('low', 1)]
@@ -67,11 +67,13 @@ def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, p
         if sl_px is not None:   # structural stop price -> % from the actual entry, kept inside the cap
             sl = np.clip(1 - np.asarray(sl_px) / e, sl_cap[0], sl_cap[1])
         if tp_px is not None:
-            tp = np.clip(np.asarray(tp_px) / e - 1, 0.03, 0.25)
+            tp = np.clip(np.asarray(tp_px) / e - 1, tp_cap[0], tp_cap[1])
     tpp, slp = e * (1 + tp), e * (1 - sl)
     res = np.full(len(df), np.nan)
+    exk = np.full(len(df), -1)
     done = ~ok
     for k in range(1, hold + 1):
+        before = done.copy()
         o, h, l, c = F[('open', k)], F[('high', k)], F[('low', k)], F[('close', k)]
         avail = ~np.isnan(c)
         act = ~done & avail
@@ -99,9 +101,13 @@ def simulate(df, F, mask, mode='open', tp=0.05, sl=0.04, hold=3, max_gap=None, p
             hs = act & ~bull & (l <= slp); res[hs] = -sl[hs]; done |= hs; act &= ~hs
         if k == hold:
             res[act] = c[act] / e[act] - 1; done |= act
+        exk[done & ~before] = k
         # data ran out (most recent signals): leave open -> NaN
     res = res - FEE
     res[~ok] = np.nan
+    if return_exit:
+        exk[~ok] = -1
+        return res, exk, e, tp, sl
     return res
 
 def stats(r, dates=None, period=None):

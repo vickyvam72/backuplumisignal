@@ -1,0 +1,51 @@
+tier,id,strategi,trades,winrate,akumulasi_pl
+semua,1,Oversold + Volume Beli,12,33.3,-21.5
+semua,2,Pantulan Hijau,81,60.5,542.6
+semua,3,Naik Pelan dari Dasar,23,21.7,-63.0
+semua,4,Squeeze Naik Beruntun,24,45.8,13.9
+semua,5,Squeeze di MA20,315,57.1,780.3
+semua,6,Pantulan Pasar Panik,126,38.1,65.6
+semua,7,Reversal dari Dasar,27,22.2,-79.8
+semua,8,Engulfing Oversold,125,47.2,328.3
+semua,9,Squeeze Higher Low,36,27.8,-54.1
+semua,10,Ekor Bawah di Range Sempit,149,26.8,-12.3
+250jt,1,Oversold + Volume Beli,13,46.2,-15.4
+250jt,2,Pantulan Hijau,71,56.3,381.0
+250jt,3,Naik Pelan dari Dasar,23,26.1,-52.3
+250jt,4,Squeeze Naik Beruntun,129,59.7,352.6
+250jt,5,Squeeze di MA20,242,54.1,564.4
+250jt,6,Pantulan Pasar Panik,121,47.9,468.3
+250jt,7,Reversal dari Dasar,22,13.6,-157.1
+250jt,8,Engulfing Oversold,85,43.5,178.4
+250jt,9,Squeeze Higher Low,43,25.6,-88.5
+250jt,10,Ekor Bawah di Range Sempit,122,26.2,-40.0
+1M,1,Oversold + Volume Beli,7,28.6,-23.5
+1M,2,Pantulan Hijau,46,50.0,115.7
+1M,3,Naik Pelan dari Dasar,46,43.5,15.1
+1M,4,Squeeze Naik Beruntun,11,36.4,-15.8
+1M,5,Squeeze di MA20,304,47.4,504.9
+1M,6,Pantulan Pasar Panik,114,51.8,625.0
+1M,7,Reversal dari Dasar,27,11.1,-167.1
+1M,8,Engulfing Oversold,62,43.5,128.0
+1M,9,Squeeze Higher Low,66,30.3,-46.4
+1M,10,Ekor Bawah di Range Sempit,131,29.0,6.6
+5M,1,Oversold + Volume Beli,6,50.0,10.1
+5M,2,Pantulan Hijau,12,41.7,-0.2
+5M,3,Naik Pelan dari Dasar,16,31.2,-36.7
+5M,4,Squeeze Naik Beruntun,14,50.0,9.4
+5M,5,Squeeze di MA20,99,38.4,8.8
+5M,6,Pantulan Pasar Panik,87,48.3,436.1
+5M,7,Reversal dari Dasar,70,54.3,300.3
+5M,8,Engulfing Oversold,51,39.2,105.8
+5M,9,Squeeze Higher Low,125,40.8,7.9
+5M,10,Ekor Bawah di Range Sempit,82,32.9,143.8
+20M,1,Oversold + Volume Beli,1,100.0,4.9
+20M,2,Pantulan Hijau,6,50.0,-9.5
+20M,3,Naik Pelan dari Dasar,13,53.8,9.1
+20M,4,Squeeze Naik Beruntun,7,42.9,2.6
+20M,5,Squeeze di MA20,23,39.1,-39.2
+20M,6,Pantulan Pasar Panik,74,50.0,398.7
+20M,7,Reversal dari Dasar,31,54.8,154.7
+20M,8,Engulfing Oversold,28,50.0,107.8
+20M,9,Squeeze Higher Low,78,50.0,127.7
+20M,10,Ekor Bawah di Range Sempit,40,32.5,53.1

@@ -1,0 +1,62 @@
+{
+ "1": {
+  "cond": "rsi<35 & udvr2 & p<200",
+  "reg": "ret",
+  "rank": "value",
+  "exit": "atr2.5/2"
+ },
+ "2": {
+  "cond": "up3 & rsi<35 & p<200",
+  "reg": "ret",
+  "rank": "rsi_low",
+  "exit": "atr3/1.5"
+ },
+ "3": {
+  "cond": "upstreak3 & pos60_lo & inside",
+  "reg": "br30",
+  "rank": "value",
+  "exit": "low5/res"
+ },
+ "4": {
+  "cond": "squeeze & upstreak3 & pos60_lo",
+  "reg": "ret",
+  "rank": "volratio",
+  "exit": "atr2/1.5"
+ },
+ "5": {
+  "cond": "squeeze & near_ma20 & p<200",
+  "reg": "br50",
+  "rank": "udvr",
+  "exit": "low10/res"
+ },
+ "6": {
+  "cond": "lwick & gapdown_today",
+  "reg": "weak",
+  "rank": "volratio",
+  "exit": "atr3/1.5"
+ },
+ "7": {
+  "cond": "up3 & pos60_lo & reversal",
+  "reg": "ret",
+  "rank": "volratio",
+  "exit": "low5/3atr"
+ },
+ "8": {
+  "cond": "downtrend & rsi<35 & engulf",
+  "reg": "ret",
+  "rank": "volratio",
+  "exit": "low5/3atr"
+ },
+ "9": {
+  "cond": "squeeze & pos60_lo & hl_rise",
+  "reg": "ret",
+  "rank": "rsi_low",
+  "exit": "low5/3atr"
+ },
+ "10": {
+  "cond": "lwick & pos60_lo & nr7",
+  "reg": "ret",
+  "rank": "rsi_low",
+  "exit": "low5/3atr"
+ }
+}

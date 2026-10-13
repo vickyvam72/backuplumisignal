@@ -1,0 +1,72 @@
+name: Market snapshot
+
+# Daily snapshot of every IDX stock (close, change, volume, value) from TradingView's public
+# scanner, saved to the `market-data` branch so it can be read without any login.
+on:
+  schedule:
+    - cron: "15 10 * * 1-5"   # 17:15 WIB, after the close
+  push:
+    branches: [data-request]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch IDX snapshot from TradingView
+        run: |
+          python3 - <<'EOF'
+          import json, csv, urllib.request, datetime, os
+          body = {
+            "filter": [{"left": "type", "operation": "equal", "right": "stock"}],
+            "options": {"lang": "en"},
+            "markets": ["indonesia"],
+            "symbols": {"query": {"types": []}, "tickers": []},
+            "columns": ["name", "description", "close", "change", "open", "high", "low",
+                        "volume", "Value.Traded", "relative_volume_10d_calc", "market_cap_basic", "sector"],
+            "sort": {"sortBy": "change", "sortOrder": "desc"},
+            "range": [0, 2000],
+          }
+          req = urllib.request.Request(
+              "https://scanner.tradingview.com/indonesia/scan",
+              data=json.dumps(body).encode(),
+              headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+          )
+          data = json.load(urllib.request.urlopen(req, timeout=60))
+          cols = body["columns"]
+          rows = []
+          for item in data.get("data", []):
+              d = dict(zip(cols, item["d"]))
+              d["ticker"] = item["s"].split(":")[-1]
+              rows.append(d)
+          wib = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+          day = wib.strftime("%Y-%m-%d")
+          os.makedirs("out", exist_ok=True)
+          keys = ["ticker"] + cols
+          for name in (f"out/{day}.csv", "out/latest.csv"):
+              with open(name, "w", newline="") as f:
+                  w = csv.DictWriter(f, fieldnames=keys)
+                  w.writeheader()
+                  for r in rows:
+                      w.writerow({k: r.get(k) for k in keys})
+          with open("out/meta.txt", "w") as f:
+              f.write(f"fetched_wib={wib.isoformat()} rows={len(rows)}\n")
+          print(f"{len(rows)} rows for {day}")
+          EOF
+
+      - name: Save to market-data branch
+        run: |
+          git config --global user.name "lumi-ci"
+          git config --global user.email "lumi-ci@users.noreply.github.com"
+          git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data \
+            || (mkdir data && cd data && git init -q -b market-data && git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}")
+          mkdir -p data/snapshots
+          cp out/*.csv data/snapshots/
+          cp out/meta.txt data/
+          cd data
+          git add -A
+          git commit -qm "Snapshot $(cat meta.txt)" || echo "no change"
+          git push -q origin HEAD:market-data

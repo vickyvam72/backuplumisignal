@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - "**.md"
+      - ".github/workflows/market-snapshot.yml"
   workflow_dispatch:
 
 permissions:

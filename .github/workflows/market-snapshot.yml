@@ -23,7 +23,7 @@ jobs:
           # Current session + the 5 previous sessions per stock (TradingView "[n]" offsets).
           base = ["name", "description", "sector", "close", "open", "high", "low", "volume", "Value.Traded", "change"]
           hist = []
-          for n in range(1, 7):
+          for n in range(1, 13):
               hist += [f"close[{n}]", f"open[{n}]", f"high[{n}]", f"low[{n}]", f"volume[{n}]"]
           cols = base + hist
           body = {
@@ -58,6 +58,14 @@ jobs:
           with open("out/meta.txt", "w") as f:
               f.write(f"fetched_wib={wib.isoformat()} rows={len(rows)} cols={len(cols)}\n")
           print(f"{len(rows)} rows for {day}")
+          try:
+              yq = urllib.request.Request("https://query1.finance.yahoo.com/v8/finance/chart/BBCA.JK?range=1mo&interval=1d", headers={"User-Agent": "Mozilla/5.0"})
+              yr = json.load(urllib.request.urlopen(yq, timeout=60))["chart"]["result"][0]
+              with open("out/bbca_dates.txt", "w") as f:
+                  for ts, c in zip(yr["timestamp"], yr["indicators"]["quote"][0]["close"]):
+                      f.write(datetime.datetime.utcfromtimestamp(ts + 7*3600).strftime("%Y-%m-%d") + f" {c}\n")
+          except Exception as e:
+              print("yahoo failed", e)
           PY
 
       - name: Save to market-data branch
@@ -67,7 +75,7 @@ jobs:
           git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
           mkdir -p data/snapshots
           cp out/*.csv data/snapshots/
-          cp out/meta.txt data/
+          cp out/meta.txt data/; cp out/bbca_dates.txt data/ 2>/dev/null || true
           rm -f data/probe.json
           cd data
           git add -A

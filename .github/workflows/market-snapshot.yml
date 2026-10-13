@@ -1,83 +1,51 @@
 name: Market snapshot
-
-# Daily snapshot of every IDX stock from TradingView's public scanner: today's OHLCV plus the
-# 6 previous sessions, saved to the `market-data` branch so it can be read without any login.
 on:
-  schedule:
-    - cron: "15 10 * * 1-5"   # 17:15 WIB, after the close
   push:
     branches: [data-request]
-  workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
-  snapshot:
+  history:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch IDX snapshot from TradingView
+      - name: Get ticker list
+        run: |
+          git clone -q --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
+          cut -d, -f1 data/snapshots/latest.csv | tail -n +2 > tickers.txt
+          wc -l tickers.txt
+      - name: Fetch 3 months of daily bars from Yahoo Finance
         run: |
           python3 - <<'PY'
-          import json, csv, urllib.request, datetime, os
-          # Current session + the 5 previous sessions per stock (TradingView "[n]" offsets).
-          base = ["name", "description", "sector", "close", "open", "high", "low", "volume", "Value.Traded", "change"]
-          hist = []
-          for n in range(1, 13):
-              hist += [f"close[{n}]", f"open[{n}]", f"high[{n}]", f"low[{n}]", f"volume[{n}]"]
-          cols = base + hist
-          body = {
-              "filter": [{"left": "type", "operation": "equal", "right": "stock"}],
-              "markets": ["indonesia"],
-              "symbols": {"query": {"types": []}, "tickers": []},
-              "columns": cols,
-              "sort": {"sortBy": "change", "sortOrder": "desc"},
-              "range": [0, 2000],
-          }
-          req = urllib.request.Request(
-              "https://scanner.tradingview.com/indonesia/scan",
-              data=json.dumps(body).encode(),
-              headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-          )
-          data = json.load(urllib.request.urlopen(req, timeout=90))
-          rows = []
-          for item in data.get("data", []):
-              d = dict(zip(cols, item["d"]))
-              d["ticker"] = item["s"].split(":")[-1]
-              rows.append(d)
-          wib = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
-          day = wib.strftime("%Y-%m-%d")
-          os.makedirs("out", exist_ok=True)
-          keys = ["ticker"] + cols
-          for name in (f"out/{day}.csv", "out/latest.csv"):
-              with open(name, "w", newline="") as f:
-                  w = csv.DictWriter(f, fieldnames=keys)
-                  w.writeheader()
-                  for r in rows:
-                      w.writerow({k: r.get(k) for k in keys})
-          with open("out/meta.txt", "w") as f:
-              f.write(f"fetched_wib={wib.isoformat()} rows={len(rows)} cols={len(cols)}\n")
-          print(f"{len(rows)} rows for {day}")
-          try:
-              yq = urllib.request.Request("https://query1.finance.yahoo.com/v8/finance/chart/BBCA.JK?range=1mo&interval=1d", headers={"User-Agent": "Mozilla/5.0"})
-              yr = json.load(urllib.request.urlopen(yq, timeout=60))["chart"]["result"][0]
-              with open("out/bbca_dates.txt", "w") as f:
-                  for ts, c in zip(yr["timestamp"], yr["indicators"]["quote"][0]["close"]):
-                      f.write(datetime.datetime.utcfromtimestamp(ts + 7*3600).strftime("%Y-%m-%d") + f" {c}\n")
-          except Exception as e:
-              print("yahoo failed", e)
+          import json, urllib.request, datetime, concurrent.futures, time
+          tickers = [t.strip() for t in open("tickers.txt") if t.strip()]
+          def fetch(t):
+              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}.JK?range=3mo&interval=1d"
+              for attempt in range(3):
+                  try:
+                      req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                      r = json.load(urllib.request.urlopen(req, timeout=30))["chart"]["result"][0]
+                      q = r["indicators"]["quote"][0]
+                      out = []
+                      for i, ts in enumerate(r.get("timestamp") or []):
+                          c = q["close"][i]
+                          if c is None: continue
+                          d = datetime.datetime.utcfromtimestamp(ts + 7*3600).strftime("%Y-%m-%d")
+                          out.append(f"{d},{t},{q['open'][i]},{q['high'][i]},{q['low'][i]},{c},{q['volume'][i]}")
+                      return out
+                  except Exception as e:
+                      time.sleep(1 + attempt)
+              return []
+          lines, ok = [], 0
+          with concurrent.futures.ThreadPoolExecutor(8) as ex:
+              for res in ex.map(fetch, tickers):
+                  if res: ok += 1
+                  lines += res
+          with open("data/yahoo_3mo.csv", "w") as f:
+              f.write("date,ticker,open,high,low,close,volume\n" + "\n".join(lines) + "\n")
+          print(f"tickers ok {ok}/{len(tickers)}, rows {len(lines)}")
           PY
-
-      - name: Save to market-data branch
+      - name: Save
         run: |
-          git config --global user.name "lumi-ci"
-          git config --global user.email "lumi-ci@users.noreply.github.com"
-          git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
-          mkdir -p data/snapshots
-          cp out/*.csv data/snapshots/
-          cp out/meta.txt data/; cp out/bbca_dates.txt data/ 2>/dev/null || true
-          rm -f data/probe.json
           cd data
-          git add -A
-          git commit -qm "Snapshot $(cat meta.txt)" || echo "no change"
-          git push -q origin HEAD:market-data
+          git config user.name lumi-ci; git config user.email lumi-ci@users.noreply.github.com
+          git add -A; git commit -qm "Yahoo 3-month daily history"; git push -q origin HEAD:market-data

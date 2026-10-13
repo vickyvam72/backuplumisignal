@@ -153,6 +153,8 @@ data class Signal(
     val startDate: String? = null,
     val trackBars: List<Bar> = emptyList(),
     val live: LivePoint? = null,
+    /** Intraday minute path per date (only stored for days where the order of TP/SL mattered). */
+    val dayPaths: Map<String, List<Double>> = emptyMap(),
     val status: SignalStatus = SignalStatus.WAITING,
     val statusNote: String = "",
     val entryPrice: Double? = null,

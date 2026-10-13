@@ -43,20 +43,22 @@ object Monitor {
      * the final bars once. Returns the number of signals whose status changed.
      */
     suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int {
-        val open = Graph.history.items.value.filter { it.isOpen }
-        if (open.isEmpty() || Graph.session.access == null) return 0
-        Graph.api.refreshIfNeeded()
-
+        if (Graph.session.access == null) return 0
         val now = Market.now()
         val today = Market.today()
+        // Open signals, plus those closed today: a same-day TP/SL can still be corrected with the
+        // minute path while today's intraday data is available.
+        val targets = Graph.history.items.value.filter { it.isOpen || it.exitDate == today }
+        if (targets.isEmpty()) return 0
+        Graph.api.refreshIfNeeded()
+
         val inSession = Market.sessionInProgress(now)
         val key = today + if (inSession) "-s" else "-c"
         // Outside trading hours one fetch per day is enough; during the session fetch every pass.
         if (!inSession && !forceDaily && Graph.cache.lastDailyKey == key) return 0
 
-        val symbols = open.map { it.symbol }.distinct()
         val pages = mutableMapOf<String, List<Bar>>()
-        for (sym in symbols) {
+        for (sym in targets.map { it.symbol }.distinct()) {
             try {
                 pages[sym] = Graph.api.historyPage(sym, 1).first
             } catch (e: AuthExpiredException) {
@@ -66,9 +68,20 @@ object Monitor {
         }
         Graph.cache.lastDailyKey = key
 
+        val paths = mutableMapOf<String, List<Double>?>()
+        suspend fun pathFor(sym: String): List<Double>? = paths.getOrPut(sym) {
+            try {
+                Graph.api.intradayPath(sym).takeIf { it.size >= 2 }
+            } catch (e: AuthExpiredException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         var changed = 0
         val updated = mutableListOf<Signal>()
-        for (sig in open) {
+        for (sig in targets) {
             var s = sig
             val page = pages[sig.symbol]
             if (page != null) {
@@ -81,10 +94,22 @@ object Monitor {
                     live = running?.let { LivePoint(it.date, it.open, it.high, it.low, it.close, System.currentTimeMillis()) },
                 )
             }
-            val tracked = Tracker.track(s).copy(lastUpdate = System.currentTimeMillis())
-            if (tracked.status != sig.status) {
+            var tracked = Tracker.track(s)
+            // Today's bar touched both SL and TP: settle the order with today's minute path.
+            val todayBar = page?.lastOrNull()?.takeIf { it.date == today }
+            if (todayBar != null && Tracker.ambiguous(s, todayBar) && today !in s.dayPaths &&
+                (tracked.exitDate == today || tracked.isOpen)
+            ) {
+                val path = pathFor(sig.symbol)
+                if (path != null) {
+                    s = s.copy(dayPaths = s.dayPaths + (today to path))
+                    tracked = Tracker.track(s)
+                }
+            }
+            tracked = tracked.copy(lastUpdate = System.currentTimeMillis())
+            if (tracked.status != sig.status || tracked.exitPrice != sig.exitPrice) {
                 changed++
-                Notifier.statusChanged(ctx, tracked)
+                if (tracked.status != sig.status) Notifier.statusChanged(ctx, tracked)
             }
             updated += tracked
         }

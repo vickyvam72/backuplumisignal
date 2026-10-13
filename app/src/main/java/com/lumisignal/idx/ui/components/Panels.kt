@@ -219,7 +219,8 @@ data class WinStats(
     val open: Int,
     val cancelled: Int,
     val winRate: Double?,
-    val avgPnl: Double?,
+    /** Sum of realised P/L % of every closed trade. */
+    val totalPnl: Double?,
 )
 
 fun winStats(list: List<Signal>): WinStats {
@@ -236,7 +237,7 @@ fun winStats(list: List<Signal>): WinStats {
         open = open,
         cancelled = cancelled,
         winRate = if (decided > 0) wins * 100.0 / decided else null,
-        avgPnl = if (closedPnl.isNotEmpty()) closedPnl.average() else null,
+        totalPnl = if (closedPnl.isNotEmpty()) closedPnl.sum() else null,
     )
 }
 
@@ -285,8 +286,8 @@ fun WinStatsCard(title: String, subtitle: String, stats: WinStats, accent: Color
             StatTile("Total", "${stats.total}", Modifier.weight(1f))
             StatTile("Berjalan", "${stats.open}", Modifier.weight(1f), Lumi.Sky)
             StatTile(
-                "Rata P/L", stats.avgPnl?.let { Fmt.pct(it) } ?: "–", Modifier.weight(1f),
-                if ((stats.avgPnl ?: 0.0) >= 0) Lumi.Green else Lumi.Red,
+                "Akumulasi P/L", stats.totalPnl?.let { Fmt.pct(it) } ?: "–", Modifier.weight(1f),
+                if ((stats.totalPnl ?: 0.0) >= 0) Lumi.Green else Lumi.Red,
             )
         }
     }

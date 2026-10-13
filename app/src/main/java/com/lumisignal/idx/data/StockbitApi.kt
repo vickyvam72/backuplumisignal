@@ -227,6 +227,15 @@ class StockbitApi(private val session: SessionStore) {
         return parseBrokerSummary(root.dataOf(), from, to)
     }
 
+    /** Minute-by-minute closes of the current session, oldest first (empty when unavailable). */
+    suspend fun intradayPath(symbol: String): List<Double> {
+        val root = get("/company-price-feed/prices/close", listOf("symbol" to symbol, "interval" to "1"))
+        val data = root.path("data")
+        val row = (data as? JsonArray)?.firstOrNull() ?: data
+        val prices = row.path("prices") as? JsonArray ?: return emptyList()
+        return prices.mapNotNull { it.asNum()?.takeIf { v -> v > 0 } }
+    }
+
     suspend fun quote(symbol: String): Quote {
         val root = get("/emitten/$symbol/info")
         val d = root.dataOf()

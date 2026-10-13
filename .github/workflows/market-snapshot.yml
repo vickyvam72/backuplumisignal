@@ -13,13 +13,13 @@ jobs:
           git clone -q --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
           cut -d, -f1 data/snapshots/latest.csv | tail -n +2 > tickers.txt
           wc -l tickers.txt
-      - name: Fetch 3 months of daily bars from Yahoo Finance
+      - name: Fetch 1 year of daily bars from Yahoo Finance
         run: |
           python3 - <<'PY'
           import json, urllib.request, datetime, concurrent.futures, time
           tickers = [t.strip() for t in open("tickers.txt") if t.strip()]
           def fetch(t):
-              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}.JK?range=3mo&interval=1d"
+              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}.JK?range=1y&interval=1d"
               for attempt in range(3):
                   try:
                       req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -40,7 +40,7 @@ jobs:
               for res in ex.map(fetch, tickers):
                   if res: ok += 1
                   lines += res
-          with open("data/yahoo_3mo.csv", "w") as f:
+          with open("data/yahoo_1y.csv", "w") as f:
               f.write("date,ticker,open,high,low,close,volume\n" + "\n".join(lines) + "\n")
           print(f"tickers ok {ok}/{len(tickers)}, rows {len(lines)}")
           PY
@@ -48,4 +48,4 @@ jobs:
         run: |
           cd data
           git config user.name lumi-ci; git config user.email lumi-ci@users.noreply.github.com
-          git add -A; git commit -qm "Yahoo 3-month daily history"; git push -q origin HEAD:market-data
+          git add -A; git commit -qm "Yahoo 1-year daily history"; git push -q origin HEAD:market-data

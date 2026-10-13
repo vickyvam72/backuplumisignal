@@ -1,0 +1,11 @@
+jenis,tier,pembanding,aturan,trades,winrate,akumulasi_pl,rata_pl
+profit,semua,5 saham acak per hari,"TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",1081,41.4,-102.5,-0.09
+profit,250jt,5 saham acak per hari,"TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",1090,40.9,-338.2,-0.31
+profit,1M,5 saham acak per hari,"TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",1082,40.5,-522.8,-0.48
+profit,5M,5 saham acak per hari,"TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",1085,39.2,-782.7,-0.72
+profit,20M,5 saham acak per hari,"TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",1077,40.5,-662.0,-0.61
+winrate,semua,5 saham acak per hari,"TP +2%, SL -10%, maks 7 hari",1087,73.0,-269.4,-0.25
+winrate,250jt,5 saham acak per hari,"TP +2%, SL -10%, maks 7 hari",1092,72.9,-381.4,-0.35
+winrate,1M,5 saham acak per hari,"TP +2%, SL -10%, maks 7 hari",1089,73.1,-467.7,-0.43
+winrate,5M,5 saham acak per hari,"TP +2%, SL -10%, maks 7 hari",1091,72.9,-599.1,-0.55
+winrate,20M,5 saham acak per hari,"TP +2%, SL -10%, maks 7 hari",1076,71.7,-772.2,-0.72

@@ -19,49 +19,10 @@ jobs:
           python-version: "3.11"
       - name: Install
         run: pip install curl_cffi websocket-client pandas requests
-      - name: IDX daily stock summary
-        continue-on-error: true
-        run: |
-          mkdir -p out
-          python - <<'PY'
-          import json, time, csv
-          from curl_cffi import requests
-          s = requests.Session(impersonate="chrome")
-          dates = [d.strip() for d in open('dates.txt') if d.strip()]
-          rows = []; log = []
-          try:
-              r0 = s.get("https://www.idx.co.id/id/data-pasar/ringkasan-perdagangan/ringkasan-saham/", timeout=30)
-              log.append(f"home {r0.status_code}")
-          except Exception as e:
-              log.append(f"home err {e}")
-          for d in dates:
-              ds = d.replace('-', '')
-              url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={ds}"
-              ok = False
-              for attempt in range(3):
-                  try:
-                      r = s.get(url, timeout=30, headers={"Referer": "https://www.idx.co.id/id/data-pasar/ringkasan-perdagangan/ringkasan-saham/", "Accept": "application/json"})
-                      if r.status_code == 200:
-                          j = r.json()
-                          for it in j.get('data', []):
-                              rows.append(dict(date=d, ticker=it.get('StockCode'), prev=it.get('Previous'), open=it.get('OpenPrice'), high=it.get('High'),
-                                               low=it.get('Low'), close=it.get('Close'), volume=it.get('Volume'), value=it.get('Value'), freq=it.get('Frequency')))
-                          log.append(f"{d} {r.status_code} {len(j.get('data', []))}"); ok = True; break
-                      log.append(f"{d} status {r.status_code} {r.text[:120]!r}")
-                  except Exception as e:
-                      log.append(f"{d} err {e}")
-                  time.sleep(2)
-              time.sleep(0.4)
-              if not ok and len([l for l in log if 'status' in l or 'err' in l]) > 15 and not rows:
-                  log.append("giving up IDX"); break
-          with open('out/idx_daily.csv', 'w', newline='') as f:
-              w = csv.DictWriter(f, fieldnames=['date','ticker','prev','open','high','low','close','volume','value','freq']); w.writeheader(); w.writerows(rows)
-          open('out/idx_log.txt', 'w').write('\n'.join(log))
-          print(len(rows), 'rows'); print('\n'.join(log[:20]))
-          PY
       - name: TradingView daily history
         continue-on-error: true
         run: |
+          mkdir -p out
           python - <<'PY'
           import json, random, string, re, csv, time
           from concurrent.futures import ThreadPoolExecutor
@@ -100,15 +61,15 @@ jobs:
           def job(t):
               bars = fetch(t)
               return t, bars
-          with ThreadPoolExecutor(8) as ex:
+          with ThreadPoolExecutor(3) as ex:
               for t, bars in ex.map(job, tick):
                   if not bars: empty.append(t)
                   for v in bars:
                       ts = float(v[0]); d = time.strftime('%Y-%m-%d', time.gmtime(ts + 7*3600))
                       rows.append(dict(date=d, ticker=t, open=v[1], high=v[2], low=v[3], close=v[4], volume=v[5] if len(v) > 5 else ''))
-          with open('out/tv_daily.csv', 'w', newline='') as f:
+          with open('out/tv_daily_retry.csv', 'w', newline='') as f:
               w = csv.DictWriter(f, fieldnames=['date','ticker','open','high','low','close','volume']); w.writeheader(); w.writerows(rows)
-          open('out/tv_log.txt', 'w').write(f"rows={len(rows)} tickers={len(tick)} empty={len(empty)}\n" + ' '.join(empty))
+          open('out/tv_log_retry.txt', 'w').write(f"rows={len(rows)} tickers={len(tick)} empty={len(empty)}\n" + ' '.join(empty))
           print(len(rows), 'rows', len(empty), 'empty')
           PY
       - name: Save to market-data branch

@@ -1,7 +1,7 @@
 # Radar Besok (server)
 
 Screening harian semua saham IDX dengan strategi hasil kalibrasi backtest (v9). Dijalankan GitHub Actions
-(`.github/workflows/radar.yml`) setiap hari bursa pukul ±17:40 WIB, hasilnya disimpan di branch `market-data`
+(`.github/workflows/radar.yml`) setiap hari bursa pukul ±16:25 WIB (diulang 16:45, 17:15, 18:00 bila GitHub terlambat), hasilnya disimpan di branch `market-data`
 folder `radar/` dan dibaca aplikasi Lumi Signal tanpa login.
 
 - `fetch_tv.py` — daftar saham + candle harian dari TradingView.

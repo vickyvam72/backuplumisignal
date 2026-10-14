@@ -4,7 +4,7 @@ Aplikasi Android untuk screening sinyal beli saham Indonesia (IDX). Radar dihitu
 
 ## Fitur
 
-- **Radar Besok, sekali ketuk tampil semua.** Screening semua saham IDX dihitung otomatis di server (GitHub Actions, `tools/radar`) setiap hari bursa ±17:50 WIB, dengan mesin yang sama persis dengan backtest 1 tahun. Aplikasi cukup mengunduh hasilnya: kedua jenis sinyal, kelima strategi tiap tingkat likuiditas, dan Top 5 gabungan langsung tampil tanpa memilih strategi satu per satu.
+- **Radar Besok, sekali ketuk tampil semua.** Screening semua saham IDX dihitung otomatis di server (GitHub Actions, `tools/radar`) setiap hari bursa ±16:30 WIB, dengan mesin yang sama persis dengan backtest 1 tahun. Aplikasi cukup mengunduh hasilnya: kedua jenis sinyal, kelima strategi tiap tingkat likuiditas, dan Top 5 gabungan langsung tampil tanpa memilih strategi satu per satu.
 - **Dua jenis sinyal × 5 tingkat likuiditas.** *Profit besar* (target dari ATR atau resisten) dan *Winrate tinggi* (TP minimal 3%). Tingkat: tanpa minimal, ≥ Rp250 jt, ≥ Rp1 M, ≥ Rp5 M, ≥ Rp20 M nilai transaksi rata-rata 20 hari; tiap tingkat punya 5 strateginya sendiri.
 - **Simbol unik untuk 32 strategi.** Profit besar memakai lencana kotak, winrate tinggi lencana bulat.
 - **Aturan beli & jual yang sama dengan backtest.** Beli di sesi berikutnya di harga pembukaan bila ≤ closing +1% (atau antre di batas itu), TP/SL mengikuti fraksi harga IDX dan dihitung dari harga beli sebenarnya, saham yang masih dipegang tidak direkomendasikan ulang, harga ≤ 60 dihindari.

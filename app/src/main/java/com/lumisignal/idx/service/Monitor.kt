@@ -125,7 +125,7 @@ object Monitor {
     }
 
     /**
-     * After the close the server publishes the new Radar Besok (±17:50 WIB). Download it once it is due
+     * After the close the server publishes the new Radar Besok (±16:30 WIB). Download it once it is due
      * and tell the user, so the results are ready before they open the app.
      */
     private suspend fun checkRadar(ctx: Context) {

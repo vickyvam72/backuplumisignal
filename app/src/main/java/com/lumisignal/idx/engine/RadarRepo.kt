@@ -35,8 +35,8 @@ data class RadarState(
 object RadarRepo {
     private const val BASE = "https://raw.githubusercontent.com/vickyvam72/backuplumisignal/market-data/radar/"
 
-    /** The server run starts 17:40 WIB and takes about 10 minutes. */
-    val READY_AT: LocalTime = LocalTime.of(17, 50)
+    /** The server run starts 16:25 WIB (after the 16:15 post-trading close) and takes about 7 minutes. */
+    val READY_AT: LocalTime = LocalTime.of(16, 30)
 
     val TIER_KEYS = listOf("semua", "250jt", "1M", "5M", "20M")
 

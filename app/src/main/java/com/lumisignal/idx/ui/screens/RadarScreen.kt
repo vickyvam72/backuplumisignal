@@ -318,7 +318,7 @@ private fun ResultList(
         }
         item {
             Text(
-                "Radar diperbarui otomatis setiap hari bursa ±17:50 WIB dari closing semua saham. Hasil nyata setiap sinyal tercatat di tab Riwayat.",
+                "Radar diperbarui otomatis setiap hari bursa ±16:30 WIB dari closing semua saham. Hasil nyata setiap sinyal tercatat di tab Riwayat.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
         }
@@ -394,7 +394,7 @@ fun MarketCard(d: RadarDay, error: String?) {
         if (RadarRepo.isStale()) {
             Spacer(Modifier.height(10.dp))
             Text(
-                "Radar closing ${Market.prettyDate(RadarRepo.expectedDate(), false)} belum terbit (biasanya ±17:50 WIB, atau hari itu libur bursa). " +
+                "Radar closing ${Market.prettyDate(RadarRepo.expectedDate(), false)} belum terbit (biasanya ±16:30 WIB, atau hari itu libur bursa). " +
                     "Yang tampil: closing ${Market.prettyDate(d.date, false)}.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.Amber,
             )

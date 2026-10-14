@@ -1,0 +1,563 @@
+<style>
+#dash-root .lx { display: flex; flex-direction: column; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); max-width: 80rem; margin-inline: auto; }
+#dash-root .lx-head { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+#dash-root .lx-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+#dash-root .lx-lead { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); margin: 0; max-width: 72ch; }
+#dash-root .lx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .lx-kpi { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+#dash-root .lx-kpi-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#dash-root .lx-kpi-value { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+#dash-root .lx-kpi-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#dash-root .lx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .lx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+#dash-root .lx-card h2, #dash-root .lx-section > h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+#dash-root .lx-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; }
+#dash-root .lx-chart { position: relative; min-height: 300px; }
+#dash-root .lx-tip { position: absolute; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); pointer-events: none; white-space: nowrap; z-index: 2; }
+#dash-root .lx-tip .d { color: var(--cds-text-secondary); margin-bottom: 2px; }
+#dash-root .lx-tip .r { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+#dash-root .lx-tip .sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+#dash-root .lx-tablewrap { overflow: auto; max-height: 34rem; }
+#dash-root table.lx-t { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+#dash-root table.lx-t th { position: sticky; top: 0; background: var(--color-panel); text-align: right; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+#dash-root table.lx-t td { text-align: right; padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+#dash-root table.lx-t th:first-child, #dash-root table.lx-t td:first-child { text-align: left; }
+#dash-root table.lx-t th.l, #dash-root table.lx-t td.l { text-align: left; }
+#dash-root table.lx-t th button { all: unset; cursor: pointer; }
+#dash-root table.lx-t th button:focus-visible { outline: 2px solid var(--color-fg-muted); }
+#dash-root table.lx-t tr.hl td { font-weight: var(--cds-font-weight-medium); }
+#dash-root .pos { color: var(--color-ok); }
+#dash-root .neg { color: var(--color-bad); }
+#dash-root .lx-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .lx-rule { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+#dash-root .lx-rule h3 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); display: flex; gap: var(--cds-gap-sm); align-items: center; }
+#dash-root .lx-chip { font-size: var(--cds-font-size-caption); border-radius: 999px; padding: 1px 8px; color: var(--color-bg); font-weight: var(--cds-font-weight-medium); }
+#dash-root .lx-rule dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px var(--cds-gap-sm); font-size: var(--cds-font-size-caption); }
+#dash-root .lx-rule dt { color: var(--color-fg-muted); }
+#dash-root .lx-rule dd { margin: 0; }
+#dash-root .lx-controls { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+#dash-root .lx-controls input, #dash-root .lx-controls select { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); }
+#dash-root .lx-section { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+#dash-root .lx-method { font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 78ch; margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+#dash-root [data-dash-source-state=empty] { color: transparent; }
+#dash-root [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+#dash-root .lx-fail { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 120px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+#dash-root .lx-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+#dash-root .lx-tierbar { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); align-items: center; }
+#dash-root .lx-tierbar button { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-md); border-radius: 999px; border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+#dash-root .lx-tierbar button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+#dash-root .lx-tierbar button:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 2px; }
+#dash-root .lx-sticky { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3; background: var(--color-bg); padding-block: var(--cds-pad-sm); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+#dash-root .lx-tag { font-size: var(--cds-font-size-caption); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 0 8px; color: var(--color-fg-muted); }
+#dash-root .lx-prose { font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 78ch; margin: 0; }
+#dash-root td.pick { font-weight: var(--cds-font-weight-medium); }
+</style>
+
+<div class="lx">
+  <header class="lx-head">
+    <h1 class="lx-title" id="judul">Dua jenis sinyal per tingkat likuiditas</h1>
+    <p class="lx-lead" id="takeaway"><span class="dash-skeleton">—</span></p>
+  </header>
+
+  <div class="lx-sticky" id="pilih-tingkat">
+    <span class="lx-note">Jenis sinyal: profit besar = TP lebar, winrate sekitar 50%. Winrate tinggi = TP kecil (minimal 3%, berbeda per strategi), SL lebih lebar (maksimal 3x TP), sering kena TP.</span>
+    <div class="lx-tierbar" id="jenisbar" role="group" aria-label="Jenis sinyal"></div>
+    <span class="lx-note">Tingkat likuiditas untuk rincian di bawah:</span>
+    <div class="lx-tierbar" id="tierbar" role="group" aria-label="Tingkat likuiditas"></div>
+  </div>
+
+  <div class="lx-card" id="per-tingkat">
+    <h2 id="per-tingkat-judul">Top 5 gabungan per tingkat likuiditas</h2>
+    <p class="lx-note">Tingkat = minimal rata-rata nilai transaksi harian 20 hari. Tiap tingkat dan jenis sinyal memakai 5 strateginya sendiri. TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah), jadi P/L tidak selalu bulat. P/L murni dari harga beli ke harga TP/SL, tanpa fee; harga yang dibuka melewati TP/SL dicatat tepat di level TP/SL. Akumulasi P/L = jumlah P/L semua transaksi.</p>
+    <div class="lx-tablewrap">
+      <table class="lx-t" data-source="tingkat_ringkas" data-row-key="jenis,tier">
+        <thead><tr>
+          <th data-field="label">Tingkat</th><th data-field="saham">Saham</th><th data-field="trades">Transaksi</th><th data-field="winrate">Winrate</th><th data-field="kena_tp">Kena TP</th>
+          <th data-field="akumulasi_pl">Akumulasi P/L</th><th data-field="rata_pl">Rata-rata</th><th data-field="max_drawdown">Drawdown</th><th data-field="bulan_terburuk">Bulan terburuk</th>
+          <th data-field="bulan_mei">Mei 2026</th><th data-field="uji">60 hari terakhir</th>
+          <th data-field="acak_win">5 saham acak: winrate</th><th data-field="acak">5 saham acak: P/L</th>
+        </tr></thead>
+        <tbody id="tb-tingkat"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="lx-section" id="kenapa-mei">
+    <h2>Kenapa Mei selalu rugi, dan perbaikannya</h2>
+    <p class="lx-prose">(Berlaku untuk kedua jenis sinyal.) Mei 2026 adalah bulan pasar turun serentak. Persentase saham likuid di atas MA20 jatuh dari 69% (27 Apr) ke 34% (12 Mei), lalu ke 7% (21 Mei). Kerugian datang dari dua hal. Pertama, akhir April sampai 12 Mei: strategi "pantul dari dasar" terus membeli karena batas lama (di bawah 30%, atau indeks turun lebih dari 3% dalam 5 hari) belum tersentuh, padahal pasar sedang merosot cepat. Kedua, 18–20 Mei: strategi pasar lemah masuk terlalu awal, saat kepanikan belum memuncak.</p>
+    <p class="lx-prose">Perbaikannya: rem pasar turun cepat. Tidak ada entry baru untuk strategi pasar normal bila persentase saham di atas MA20 (rata-rata 5 hari) turun lebih dari 15 poin dalam 10 hari. Strategi pasar lemah dipilih per tingkat, dan sebagian baru aktif di bawah 20% supaya masuk saat kepanikan sudah dalam.</p>
+    <div class="lx-card" id="kondisi-pasar">
+      <h2>Kondisi pasar dan rem</h2>
+      <p class="lx-note">Garis: persentase saham likuid di atas MA20 (rata-rata 5 hari). Area abu-abu: rem aktif, strategi pasar normal tidak membeli. Garis putus-putus: batas pasar lemah 30% dan 20%.</p>
+      <div class="lx-chart" id="chart-pasar" data-source="pasar" style="min-height:240px"></div>
+    </div>
+  </section>
+
+  <div class="lx-card" id="peta-strategi">
+    <h2 id="peta-judul">Strategi yang dipakai di tiap tingkat</h2>
+    <p class="lx-note">Angka = akumulasi P/L strategi itu (top 5 per strategi) di tingkat tersebut; kosong = tidak dipakai di tingkat itu. Tiap tingkat dikalibrasi sendiri (TP/SL, ranking, kondisi pasar bisa berbeda).</p>
+    <div class="lx-tablewrap">
+      <table class="lx-t" data-source="peta" data-row-key="jenis,strategi">
+        <thead><tr><th data-field="strategi">Strategi</th><th data-field="kondisi" class="l">Kondisi</th><th data-field="semua">Tanpa minimal</th><th data-field="250jt">≥ Rp250 juta</th><th data-field="1M">≥ Rp1 miliar</th><th data-field="5M">≥ Rp5 miliar</th><th data-field="20M">≥ Rp20 miliar</th></tr></thead>
+        <tbody id="tb-peta"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="lx-section" id="top5">
+    <h2 id="top5-judul">Top 5 gabungan</h2>
+    <p class="lx-note">Setiap malam kandidat dari 5 strategi tingkat ini dikumpulkan, lalu dipilih 5 saham. Strategi dengan rata-rata P/L semua transaksinya sejauh ini paling tinggi didahulukan (minimal 10 transaksi), lalu ranking di dalam strategi itu. Saham yang sedang di-hold atau muncul di dua strategi hanya diambil sekali.</p>
+    <div class="lx-kpis">
+      <div class="lx-kpi"><span class="lx-kpi-label">Transaksi</span><span class="lx-kpi-value dash-skeleton" data-source="top5_ringkasan" data-field="trades">—</span><span class="lx-kpi-note"><b class="dash-skeleton" data-source="top5_ringkasan" data-field="saham_unik">—</b> saham berbeda, ada transaksi di <b class="dash-skeleton" data-source="top5_ringkasan" data-field="hari_ada_transaksi">—</b> dari 240 hari</span></div>
+      <div class="lx-kpi"><span class="lx-kpi-label">Winrate</span><span class="lx-kpi-value dash-skeleton" data-source="top5_ringkasan" data-field="winrate">—</span><span class="lx-kpi-note">Kena TP <b class="dash-skeleton" data-source="top5_ringkasan" data-field="kena_tp">—</b>, kena SL <b class="dash-skeleton" data-source="top5_ringkasan" data-field="kena_sl">—</b>. Rata menang <b class="dash-skeleton" data-source="top5_ringkasan" data-field="rata_menang">—</b>, rata kalah <b class="dash-skeleton" data-source="top5_ringkasan" data-field="rata_kalah">—</b></span></div>
+      <div class="lx-kpi"><span class="lx-kpi-label">Akumulasi P/L</span><span class="lx-kpi-value dash-skeleton" data-source="top5_ringkasan" data-field="akumulasi_pl">—</span><span class="lx-kpi-note">Setara <b class="dash-skeleton" data-source="top5_rupiah" data-field="rupiah">—</b> bila tiap transaksi Rp1 juta</span></div>
+      <div class="lx-kpi"><span class="lx-kpi-label">Drawdown terdalam</span><span class="lx-kpi-value dash-skeleton" data-source="top5_ringkasan" data-field="max_drawdown">—</span><span class="lx-kpi-note">Bulan terburuk <b class="dash-skeleton" data-source="top5_ringkasan" data-field="bulan_terburuk">—</b>, Mei <b class="dash-skeleton" data-source="top5_ringkasan" data-field="bulan_mei">—</b></span></div>
+      <div class="lx-kpi"><span class="lx-kpi-label">60 hari terakhir</span><span class="lx-kpi-value dash-skeleton" data-source="top5_ringkasan" data-field="uji_akumulasi_pl">—</span><span class="lx-kpi-note"><b class="dash-skeleton" data-source="top5_ringkasan" data-field="uji_trades">—</b> transaksi, winrate <b class="dash-skeleton" data-source="top5_ringkasan" data-field="uji_winrate">—</b></span></div>
+    </div>
+    <div class="lx-card" id="komposisi">
+      <h2>Asal saham di top 5 gabungan</h2>
+      <div class="lx-tablewrap">
+        <table class="lx-t" data-source="top5_komposisi" data-row-key="jenis,tier,strategi">
+          <thead><tr><th data-field="strategi">Strategi</th><th data-field="trades">Transaksi</th><th data-field="winrate">Winrate</th><th data-field="akumulasi_pl">Akumulasi P/L</th></tr></thead>
+          <tbody id="tb-komposisi"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="lx-card" id="kurva-gabungan">
+    <h2>Akumulasi P/L</h2>
+    <p class="lx-note">Jumlah % P/L per tanggal sinyal. Garis tebal: top 5 gabungan; garis lain: tiap strategi (top 5 masing-masing). Garis putus-putus: awal 60 hari terakhir.</p>
+    <div class="lx-chart" id="chart-kurva" data-source="kurva"></div>
+  </div>
+
+  <section class="lx-section" id="aturan">
+    <h2>5 strategi di tingkat ini</h2>
+    <p class="lx-note">Semua strategi: harga di atas 60, aktif minimal 12 dari 20 hari, bukan ARA/ARB, nilai transaksi sesuai tingkat, saham yang masih di-hold tidak direkomendasikan lagi. Entry besok pagi di zona closing sampai closing +1%.</p>
+    <div class="lx-rules" id="rules" data-source="ringkasan"></div>
+  </section>
+
+  <div class="lx-card" id="tabel-ringkasan">
+    <h2>Hasil per strategi (top 5 per strategi)</h2>
+    <p class="lx-note">13 Okt 2025 – 13 Okt 2026. "60 hari" = 20 Jul – 13 Okt 2026.</p>
+    <div class="lx-tablewrap">
+      <table class="lx-t" data-source="ringkasan" data-row-key="jenis,tier,strategi">
+        <thead><tr>
+          <th data-field="strategi">Strategi</th><th data-field="trades">Transaksi</th><th data-field="winrate">Winrate</th><th data-field="akumulasi_pl">Akumulasi P/L</th>
+          <th data-field="rata_pl">Rata-rata</th><th data-field="rata_menang">Rata menang</th><th data-field="rata_kalah">Rata kalah</th><th data-field="profit_factor">Profit factor</th><th data-field="kena_tp">Kena TP</th><th data-field="kena_sl">Kena SL</th>
+          <th data-field="max_drawdown">Drawdown</th><th data-field="bulan_terburuk">Bulan terburuk</th><th data-field="bulan_mei">Mei</th><th data-field="tp_rata">TP rata-rata</th><th data-field="sl_rata">SL rata-rata</th>
+          <th data-field="hold_rata">Hold rata-rata</th><th data-field="pl_tanpa_5_terbaik">Tanpa 5 transaksi terbaik</th>
+          <th data-field="uji_trades">60 hari: transaksi</th><th data-field="uji_winrate">60 hari: winrate</th><th data-field="uji_akumulasi_pl">60 hari: P/L</th>
+        </tr></thead>
+        <tbody id="tb-ringkasan"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="lx-card" id="tabel-bulanan">
+    <h2>Akumulasi P/L per bulan</h2>
+    <p class="lx-note">Jumlah % P/L transaksi yang sinyalnya muncul di bulan itu. Tanda – berarti tidak ada transaksi.</p>
+    <div class="lx-tablewrap">
+      <table class="lx-t" id="t-bulanan" data-source="pivot_bulanan" data-row-key="jenis,tier,bulan"><thead><tr id="th-bulanan"></tr></thead><tbody id="tb-bulanan"></tbody></table>
+    </div>
+  </div>
+
+  <div class="lx-card" id="tabel-top5">
+    <h2>Transaksi top 5 gabungan</h2>
+    <p class="lx-note">Terbaru di atas. Klik judul kolom untuk mengurutkan. Hari = hari bursa dari beli sampai jual. Nilai tx = rata-rata nilai transaksi harian 20 hari saat sinyal (miliar rupiah).</p>
+    <div class="lx-controls">
+      <label for="cari-g" class="lx-note">Cari saham</label><input id="cari-g" type="search" placeholder="mis. PEGE">
+      <label for="pilih-g" class="lx-note">Dari strategi</label><select id="pilih-g"><option value="">Semua</option></select>
+      <span class="lx-note" id="jumlah-g"></span>
+    </div>
+    <div class="lx-tablewrap"><table class="lx-t" id="t-top5" data-source="top5_gabungan" data-row-key="jenis,tier,tanggal_sinyal,saham"></table></div>
+  </div>
+
+  <div class="lx-card" id="tabel-transaksi">
+    <h2>Transaksi per strategi</h2>
+    <p class="lx-note">Semua transaksi top 5 per strategi di tingkat yang dipilih, terbaru di atas.</p>
+    <div class="lx-controls">
+      <label for="cari-s" class="lx-note">Cari saham</label><input id="cari-s" type="search" placeholder="mis. PEGE">
+      <label for="pilih-s" class="lx-note">Strategi</label><select id="pilih-s"><option value="">Semua</option></select>
+      <span class="lx-note" id="jumlah-s"></span>
+    </div>
+    <div class="lx-tablewrap"><table class="lx-t" id="t-transaksi" data-source="transaksi" data-row-key="jenis,tier,tanggal_sinyal,id,saham"></table></div>
+  </div>
+
+  <section class="lx-section" id="metode">
+    <h2>Cara backtest dan batasannya</h2>
+    <ul class="lx-method">
+      <li>Data harga: candle harian semua saham IDX dari TradingView, disesuaikan untuk aksi korporasi. 13 Okt 2025 – 13 Okt 2026.</li>
+      <li>Harga TP dan SL mengikuti fraksi harga IDX (di bawah 200: Rp1; 200–499: Rp2; 500–1.999: Rp5; 2.000–4.999: Rp10; 5.000 ke atas: Rp25). Harga beli juga dibulatkan ke fraksi terdekat (harga historis yang disesuaikan aksi korporasi bisa berkoma). TP dibulatkan ke atas, SL ke bawah, lalu P/L dihitung dari harga itu. P/L murni dari harga beli: kena TP = +TP%, kena SL = −SL%, tanpa fee. Bila harga dibuka melewati TP atau SL, dicatat tepat di level TP/SL. Akumulasi P/L = jumlah P/L semua transaksi. Bila 7 hari (atau batas hold strategi) tidak kena TP/SL, dijual di harga closing hari terakhir.</li>
+      <li>Profit besar: 24 kandidat strategi dikalibrasi per tingkat (TP/SL dari ATR atau struktur harga), lalu dipilih 5 yang memberi top 5 gabungan terbaik. Winrate tinggi: sekitar 630 setup x 57 aturan TP/SL diuji per tingkat (TP tetap 3–5%, TP dari ATR minimal 3%, SL tetap 4–10% atau dari ATR/support, SL maksimal 3x TP). Dipilih 5 per tingkat dengan winrate top 5 gabungan tertinggi, minimal 3 untuk pasar normal.</li>
+      <li>Batas impas winrate: TP 3% / SL 8% butuh 72,7%; TP 4% / SL 10% butuh 71,4%. Pembanding 5 saham acak dengan TP 3% / SL 8% hanya mencapai winrate 62–65%: hampir impas di tingkat tanpa minimal (karena pembulatan fraksi harga di saham murah) dan rugi di tingkat lainnya.</li>
+      <li>Setiap malam tiap strategi memilih top 5 di antara saham yang lolos tingkatnya, melewati saham yang posisinya belum ditutup. Entry besok pagi di zona closing sampai closing +1%. Rem pasar turun cepat berlaku untuk strategi pasar normal.</li>
+      <li>Syarat kesehatan tiap strategi: minimal 40 transaksi, tetap untung tanpa 5 transaksi terbaiknya, tidak lebih dari 40% untung dari satu saham, paling banyak 1 kuartal rugi, tidak rugi di 60 hari terakhir, dan tidak tumpang tindih lebih dari 40% dengan strategi lain di tingkat yang sama. Untuk winrate tinggi, winrate juga harus minimal 5 poin di atas batas impas.</li>
+      <li>Strategi dan kombinasi dipilih dengan melihat data setahun penuh, jadi hasil ke depan kemungkinan lebih rendah. Di saham kecil, beli dalam jumlah besar bisa menggeser harga. Data broker/bandar tidak ada di backtest.</li>
+    </ul>
+  </section>
+</div>
+<script>
+(function () {
+  const nf1 = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf2 = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nf0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+  const isNum = (v) => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
+  window.lxFmt = {
+    isNum,
+    pct1: (v) => (!isNum(v) ? '–' : (Number(v) > 0 ? '+' : '') + nf1.format(Number(v)) + '%'),
+    pct2: (v) => (!isNum(v) ? '–' : (Number(v) > 0 ? '+' : '') + nf2.format(Number(v)) + '%'),
+    plain1: (v) => (!isNum(v) ? '–' : nf1.format(Number(v)) + '%'),
+    int: (v) => (!isNum(v) ? '–' : nf0.format(Number(v))),
+    dec1: (v) => (!isNum(v) ? '–' : nf1.format(Number(v))),
+    dec2: (v) => (!isNum(v) ? '–' : nf2.format(Number(v))),
+    rp: (v) => (!isNum(v) ? '–' : (Number(v) < 0 ? '−' : '') + 'Rp' + nf0.format(Math.abs(Number(v)))),
+    date: (s) => { if (!s) return '–'; const d = new Date(s + 'T00:00:00Z'); return isNaN(d) ? s : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' }); },
+    cls: (v) => (!isNum(v) ? '' : Number(v) > 0 ? 'pos' : Number(v) < 0 ? 'neg' : ''),
+  };
+  window.lxColors = (i) => dash.colors[i % dash.colors.length];
+  window.lxDash = (i) => (i >= dash.colors.length ? '5 3' : null);
+  window.lxFill = (sel, txt) => document.querySelectorAll(sel).forEach((el) => { el.textContent = txt; el.classList.remove('dash-skeleton'); });
+  window.lxTier = '250jt';
+  window.lxJenis = 'profit';
+  window.lxRedraw = [];
+  window.lxCell = (tr, v, c) => { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.appendChild(td); return td; };
+  window.lxRows = (id, allTiers) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data.filter((r) => (allTiers || r.tier === window.lxTier) && (r.jenis === undefined || r.jenis === window.lxJenis)) : null; };
+  const JB = document.getElementById('jenisbar');
+  [['profit', 'Profit besar'], ['winrate', 'Winrate tinggi']].forEach(([k, lbl]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = lbl; b.dataset.jenis = k; b.setAttribute('aria-pressed', String(k === window.lxJenis));
+    b.addEventListener('click', () => { window.lxJenis = k; JB.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.jenis === k))); window.lxRedraw.forEach((fn) => fn()); });
+    JB.appendChild(b);
+  });
+  window.lxJenisLabel = { profit: 'Profit besar', winrate: 'Winrate tinggi' };
+  const TIERS = [['semua', 'Tanpa minimal'], ['250jt', '≥ Rp250 juta'], ['1M', '≥ Rp1 miliar'], ['5M', '≥ Rp5 miliar'], ['20M', '≥ Rp20 miliar']];
+  window.lxTierLabel = Object.fromEntries(TIERS);
+  const bar = document.getElementById('tierbar');
+  TIERS.forEach(([k, lbl]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = lbl; b.dataset.tier = k; b.setAttribute('aria-pressed', String(k === window.lxTier));
+    b.addEventListener('click', () => {
+      window.lxTier = k;
+      bar.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tier === k)));
+      window.lxRedraw.forEach((fn) => fn());
+    });
+    bar.appendChild(b);
+  });
+  window.lxOn = (fn) => { window.lxRedraw.push(fn); dash.onData(fn); };
+})();
+</script>
+<script>
+dash.calc('top5_rupiah', {
+  title: 'Top 5 gabungan dalam rupiah',
+  description: 'Akumulasi P/L top 5 gabungan per tingkat bila tiap transaksi bermodal Rp1 juta.',
+  inputs: ['top5_ringkasan'],
+  fn: (top5_ringkasan) => top5_ringkasan.map((r) => ({ jenis: r.jenis, tier: r.tier, rupiah: Math.round(Number(r.akumulasi_pl) * 10000) })),
+});
+
+dash.calc('tingkat_ringkas', {
+  title: 'Ringkasan per tingkat',
+  description: 'Jumlah saham, hasil top 5 gabungan dan pembanding acak untuk tiap jenis sinyal dan tingkat likuiditas.',
+  inputs: ['tingkat', 'top5_ringkasan', 'pembanding'],
+  fn: (tingkat, top5_ringkasan, pembanding) => ['profit', 'winrate'].flatMap((jenis) => tingkat.map((t) => {
+    const g = top5_ringkasan.find((r) => r.tier === t.tier && r.jenis === jenis) || {}; const p = pembanding.find((r) => r.tier === t.tier && r.jenis === jenis) || {};
+    return { jenis, tier: t.tier, label: t.label, saham: Number(t.saham_terakhir), trades: Number(g.trades), winrate: Number(g.winrate), kena_tp: Number(g.kena_tp),
+      akumulasi_pl: Number(g.akumulasi_pl), rata_pl: Number(g.rata_pl), max_drawdown: Number(g.max_drawdown), bulan_terburuk: Number(g.bulan_terburuk), bulan_mei: Number(g.bulan_mei),
+      uji: Number(g.uji_akumulasi_pl), acak_win: Number(p.winrate), acak: Number(p.akumulasi_pl) };
+  })),
+});
+
+dash.calc('peta', {
+  title: 'Strategi x tingkat',
+  description: 'Strategi yang dipakai di tiap tingkat dan akumulasi P/L-nya (top 5 per strategi).',
+  inputs: ['ringkasan'],
+  fn: (ringkasan) => {
+    const by = {};
+    ringkasan.forEach((r) => {
+      const k = r.jenis + '|' + r.strategi; by[k] = by[k] || { id: Number(r.id), strategi: r.strategi, jenis: r.jenis, kondisi: r.kondisi };
+      by[k][r.tier] = Number(r.akumulasi_pl); by[k]['n_' + r.tier] = Number(r.trades);
+    });
+    return Object.values(by).sort((a, b) => a.id - b.id);
+  },
+});
+
+dash.calc('pivot_bulanan', {
+  title: 'P/L per bulan',
+  description: 'Akumulasi P/L per tingkat dan bulan: kolom k<id> per strategi, total 5 strategi, dan top5 = top 5 gabungan.',
+  inputs: ['bulanan'],
+  fn: (bulanan) => {
+    const by = {};
+    bulanan.forEach((r) => {
+      const k = r.jenis + '|' + r.tier + '|' + r.bulan;
+      by[k] = by[k] || { jenis: r.jenis, tier: r.tier, bulan: r.bulan, total: null, top5: null };
+      if (String(r.id) === '0') by[k].top5 = Number(r.akumulasi_pl);
+      else { by[k]['k' + r.id] = Number(r.akumulasi_pl); by[k].total = Math.round(((by[k].total || 0) + Number(r.akumulasi_pl)) * 10) / 10; }
+    });
+    return Object.values(by).sort((a, b) => (a.jenis + a.tier + a.bulan < b.jenis + b.tier + b.bulan ? -1 : 1));
+  },
+});
+
+window.lxOn(() => {
+  const F = window.lxFmt, cell = window.lxCell;
+  document.getElementById('per-tingkat-judul').textContent = 'Top 5 gabungan per tingkat likuiditas · ' + window.lxJenisLabel[window.lxJenis];
+  document.getElementById('peta-judul').textContent = 'Strategi yang dipakai di tiap tingkat · ' + window.lxJenisLabel[window.lxJenis];
+  const all = dash.data('tingkat_ringkas'); const tb = document.getElementById('tb-tingkat'); tb.textContent = '';
+  if (all.status === 'ok' && Array.isArray(all.data)) {
+    const t = { data: all.data.filter((r) => r.jenis === window.lxJenis) };
+    t.data.forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = [r.jenis, r.tier].map(encodeURIComponent).join(',');
+      cell(tr, r.label); cell(tr, F.int(r.saham)); cell(tr, F.int(r.trades)); cell(tr, F.plain1(r.winrate)); cell(tr, F.plain1(r.kena_tp)); cell(tr, F.pct1(r.akumulasi_pl), F.cls(r.akumulasi_pl));
+      cell(tr, F.pct2(r.rata_pl), F.cls(r.rata_pl)); cell(tr, F.pct1(r.max_drawdown), 'neg'); cell(tr, F.pct1(r.bulan_terburuk), F.cls(r.bulan_terburuk)); cell(tr, F.pct1(r.bulan_mei), F.cls(r.bulan_mei));
+      cell(tr, F.pct1(r.uji), F.cls(r.uji)); cell(tr, F.plain1(r.acak_win)); cell(tr, F.pct1(r.acak), F.cls(r.acak));
+      tb.appendChild(tr);
+    });
+    const tk = document.getElementById('takeaway');
+    const pr = all.data.filter((r) => r.jenis === 'profit'), wr = all.data.filter((r) => r.jenis === 'winrate');
+    tk.textContent = 'Profit besar: top 5 gabungan untung ' + F.pct1(Math.min(...pr.map((r) => r.akumulasi_pl))) + ' sampai ' + F.pct1(Math.max(...pr.map((r) => r.akumulasi_pl))) +
+      ' setahun dengan winrate sekitar ' + F.plain1(Math.round(pr.reduce((a, r) => a + r.winrate, 0) / pr.length)) + '. Winrate tinggi: winrate ' + F.plain1(Math.min(...wr.map((r) => r.winrate))) + ' sampai ' +
+      F.plain1(Math.max(...wr.map((r) => r.winrate))) + ' dan untung ' + F.pct1(Math.min(...wr.map((r) => r.akumulasi_pl))) + ' sampai ' + F.pct1(Math.max(...wr.map((r) => r.akumulasi_pl))) +
+      '. 5 saham acak per hari jauh di bawahnya (lihat kolom pembanding).';
+  }
+  const p = dash.data('peta'); const tp = document.getElementById('tb-peta'); tp.textContent = '';
+  if (p.status === 'ok' && Array.isArray(p.data)) {
+    p.data.filter((r) => r.jenis === window.lxJenis).forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = encodeURIComponent(r.jenis + '|' + r.strategi);
+      cell(tr, r.strategi); cell(tr, r.kondisi, 'l');
+      ['semua', '250jt', '1M', '5M', '20M'].forEach((k) => {
+        const td = document.createElement('td');
+        if (r[k] === undefined) { td.textContent = ''; }
+        else { td.className = 'pick ' + F.cls(r[k]); td.textContent = F.pct1(r[k]); const sm = document.createElement('span'); sm.className = 'lx-note'; sm.textContent = ' (' + F.int(r['n_' + k]) + ')'; td.appendChild(sm); }
+        tr.appendChild(td);
+      });
+      tp.appendChild(tr);
+    });
+  }
+});
+
+window.lxOn(() => {
+  const F = window.lxFmt, fill = window.lxFill;
+  const rows = window.lxRows('top5_ringkasan'); const rp = window.lxRows('top5_rupiah');
+  document.getElementById('top5-judul').textContent = 'Top 5 gabungan · ' + window.lxJenisLabel[window.lxJenis] + ' · ' + window.lxTierLabel[window.lxTier];
+  document.querySelectorAll('[data-source="top5_ringkasan"], [data-source="top5_rupiah"]').forEach((el) => el.setAttribute('data-where', 'jenis=' + window.lxJenis + '&tier=' + encodeURIComponent(window.lxTier)));
+  const q = (f) => `[data-source="top5_ringkasan"][data-field="${f}"]`;
+  if (rows && rows.length) {
+    const d = rows[0];
+    fill(q('trades'), F.int(d.trades)); fill(q('saham_unik'), F.int(d.saham_unik)); fill(q('hari_ada_transaksi'), F.int(d.hari_ada_transaksi));
+    fill(q('winrate'), F.plain1(d.winrate)); fill(q('kena_tp'), F.plain1(d.kena_tp)); fill(q('kena_sl'), F.plain1(d.kena_sl)); fill(q('rata_menang'), F.pct2(d.rata_menang)); fill(q('rata_kalah'), F.pct2(d.rata_kalah));
+    fill(q('akumulasi_pl'), F.pct1(d.akumulasi_pl)); fill(q('max_drawdown'), F.pct1(d.max_drawdown)); fill(q('bulan_terburuk'), F.pct1(d.bulan_terburuk));
+    fill(q('bulan_mei'), F.pct1(d.bulan_mei)); fill(q('uji_akumulasi_pl'), F.pct1(d.uji_akumulasi_pl)); fill(q('uji_trades'), F.int(d.uji_trades)); fill(q('uji_winrate'), F.plain1(d.uji_winrate));
+  }
+  if (rp && rp.length) fill('[data-source="top5_rupiah"][data-field="rupiah"]', F.rp(rp[0].rupiah));
+});
+
+window.lxOn(() => {
+  const F = window.lxFmt, cell = window.lxCell;
+  const rows = window.lxRows('top5_komposisi'); const tb = document.getElementById('tb-komposisi'); tb.textContent = '';
+  if (!rows) return;
+  rows.forEach((r) => { const tr = document.createElement('tr'); tr.dataset.key = [r.jenis, r.tier, r.strategi].map(encodeURIComponent).join(',');
+    cell(tr, r.strategi); cell(tr, F.int(r.trades)); cell(tr, F.plain1(r.winrate)); cell(tr, F.pct1(r.akumulasi_pl), F.cls(r.akumulasi_pl)); tb.appendChild(tr); });
+});
+
+window.lxStratOrder = () => { const r = window.lxRows('ringkasan'); return r ? r.map((x) => ({ id: String(x.id), name: x.strategi })) : []; };
+
+window.lxOn(() => {
+  const F = window.lxFmt, cell = window.lxCell;
+  const rows = window.lxRows('ringkasan'); const tb = document.getElementById('tb-ringkasan'); const rules = document.getElementById('rules');
+  tb.textContent = ''; rules.textContent = '';
+  if (!rows) { if (dash.data('ringkasan').status === 'error') { const d = document.createElement('div'); d.className = 'lx-fail'; d.textContent = 'Failed to load'; rules.appendChild(d); } return; }
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr'); tr.dataset.key = [r.jenis, r.tier, r.strategi].map(encodeURIComponent).join(',');
+    cell(tr, r.strategi); cell(tr, F.int(r.trades)); cell(tr, F.plain1(r.winrate)); cell(tr, F.pct1(r.akumulasi_pl), F.cls(r.akumulasi_pl));
+    cell(tr, F.pct2(r.rata_pl), F.cls(r.rata_pl)); cell(tr, F.pct2(r.rata_menang), 'pos'); cell(tr, F.pct2(r.rata_kalah), 'neg'); cell(tr, F.dec2(r.profit_factor));
+    cell(tr, F.plain1(r.kena_tp)); cell(tr, F.plain1(r.kena_sl)); cell(tr, F.pct1(r.max_drawdown), 'neg'); cell(tr, F.pct1(r.bulan_terburuk), F.cls(r.bulan_terburuk)); cell(tr, F.pct1(r.bulan_mei), F.cls(r.bulan_mei));
+    cell(tr, '+' + F.plain1(r.tp_rata)); cell(tr, '−' + F.plain1(r.sl_rata)); cell(tr, F.dec1(r.hold_rata) + ' hari'); cell(tr, F.pct1(r.pl_tanpa_5_terbaik), F.cls(r.pl_tanpa_5_terbaik));
+    cell(tr, F.int(r.uji_trades)); cell(tr, F.plain1(r.uji_winrate)); cell(tr, F.pct1(r.uji_akumulasi_pl), F.cls(r.uji_akumulasi_pl));
+    tb.appendChild(tr);
+    const card = document.createElement('article'); card.className = 'lx-rule';
+    const h = document.createElement('h3'); const chip = document.createElement('span'); chip.className = 'lx-chip'; chip.style.background = window.lxColors(i); chip.textContent = String(i + 1);
+    const nm = document.createElement('span'); nm.textContent = r.strategi; const tag = document.createElement('span'); tag.className = 'lx-tag'; tag.textContent = r.kondisi; h.append(chip, nm, tag);
+    const dl = document.createElement('dl');
+    [['Syarat', r.syarat], ['Kondisi pasar', r.pasar], ['Top 5 menurut', r.ranking], ['TP / SL', r.exit],
+     ['Hasil', F.int(r.trades) + ' transaksi, winrate ' + F.plain1(r.winrate) + ' (kena TP ' + F.plain1(r.kena_tp) + '), akumulasi ' + F.pct1(r.akumulasi_pl) + ', bulan terburuk ' + F.pct1(r.bulan_terburuk)],
+     ['Per kuartal', [r.q1, r.q2, r.q3, r.q4].map((q) => F.pct1(q)).join(' · ')]].forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd);
+    });
+    card.append(h, dl); rules.appendChild(card);
+  });
+});
+
+window.lxOn(() => {
+  const F = window.lxFmt;
+  const all = window.lxRows('kurva'); const strat = window.lxStratOrder();
+  const box = document.getElementById('chart-kurva'); box.textContent = '';
+  if (!all || !strat.length) { if (dash.data('kurva').status === 'error') { const d = document.createElement('div'); d.className = 'lx-fail'; d.style.minHeight = '300px'; d.textContent = 'Failed to load'; box.appendChild(d); } return; }
+  const series = strat.map((s, i) => ({ key: 'k' + s.id, label: s.name, color: window.lxColors(i), w: 1.5 })).concat([{ key: 'top5', label: 'Top 5 gabungan', color: 'var(--color-fg)', w: 3 }]);
+  const byDate = {};
+  all.forEach((r) => { byDate[r.tanggal] = byDate[r.tanggal] || { tanggal: r.tanggal, date: new Date(r.tanggal + 'T00:00:00Z') }; byDate[r.tanggal][r.seri] = Number(r.akumulasi_pl); });
+  const rows = Object.values(byDate).sort((a, b) => a.date - b.date);
+  if (!rows.length) return;
+  const W = Math.max(280, box.clientWidth), H = 320;
+  const vals = rows.flatMap((r) => series.map((s) => r[s.key]).filter((v) => v !== undefined));
+  const y = d3.scaleLinear([Math.min(0, d3.min(vals)), d3.max(vals)], [H - 28, 12]).nice();
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Akumulasi P/L');
+  const ticks = y.ticks(5); const meas = svg.append('g');
+  const wmax = d3.max(ticks, (t) => meas.append('text').attr('font-size', 11).text(F.pct1(t)).node().getComputedTextLength()); meas.remove();
+  const ml = Math.ceil(wmax) + 10, mr = W < 520 ? 8 : 170;
+  const x = d3.scaleUtc(d3.extent(rows, (r) => r.date), [ml, W - mr]);
+  ticks.forEach((t) => {
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(t)).attr('y2', y(t)).attr('stroke', t === 0 ? 'var(--cds-chart-axis)' : 'var(--cds-chart-grid)');
+    svg.append('text').attr('x', ml - 6).attr('y', y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(F.pct1(t));
+  });
+  const mfmt = (d) => d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  x.ticks(W < 480 ? 4 : 7).forEach((t) => svg.append('text').attr('x', x(t)).attr('y', H - 8).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(mfmt(t)));
+  const ts = new Date('2026-07-20T00:00:00Z');
+  svg.append('line').attr('x1', x(ts)).attr('x2', x(ts)).attr('y1', 12).attr('y2', H - 28).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 4');
+  svg.append('text').attr('x', x(ts) + 4).attr('y', 22).attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text('60 hari terakhir');
+  series.forEach((s) => svg.append('path').datum(rows.filter((r) => r[s.key] !== undefined)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', s.w)
+    .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x((r) => x(r.date)).y((r) => y(r[s.key]))));
+  const last = rows[rows.length - 1];
+  if (W >= 520) {
+    const pos = series.map((s) => ({ ...s, v: last[s.key] ?? 0, y: y(last[s.key] ?? 0) })).sort((a, b) => a.y - b.y);
+    for (let j = 1; j < pos.length; j++) if (pos[j].y - pos[j - 1].y < 13) pos[j].y = pos[j - 1].y + 13;
+    const shift = Math.max(0, pos[pos.length - 1].y - (H - 30)); if (shift) pos.forEach((p) => (p.y -= shift));
+    pos.forEach((l) => svg.append('text').attr('x', W - mr + 6).attr('y', l.y).attr('dy', '0.32em').attr('font-size', 11).attr('font-weight', l.key === 'top5' ? 600 : 400).attr('fill', l.color)
+      .text((l.label.length > 18 ? l.label.slice(0, 17) + '…' : l.label) + ' ' + F.pct1(l.v)));
+  }
+  const tip = document.createElement('div'); tip.className = 'lx-tip'; tip.hidden = true; box.appendChild(tip);
+  const rule = svg.append('line').attr('y1', 12).attr('y2', H - 28).attr('stroke', 'var(--cds-chart-axis)').attr('visibility', 'hidden');
+  const dots = series.map((s) => svg.append('circle').attr('r', 3).attr('fill', s.color).attr('visibility', 'hidden'));
+  const bis = d3.bisector((r) => r.date).center;
+  svg.append('rect').attr('x', ml).attr('y', 0).attr('width', W - ml - mr).attr('height', H).attr('fill', 'transparent')
+    .on('mousemove', (ev) => {
+      const [mx] = d3.pointer(ev); const r = rows[bis(rows, x.invert(mx))];
+      rule.attr('x1', x(r.date)).attr('x2', x(r.date)).attr('visibility', 'visible');
+      series.forEach((s, i) => dots[i].attr('cx', x(r.date)).attr('cy', y(r[s.key] ?? 0)).attr('visibility', r[s.key] === undefined ? 'hidden' : 'visible'));
+      tip.textContent = ''; const dd = document.createElement('div'); dd.className = 'd'; dd.textContent = F.date(r.tanggal); tip.appendChild(dd);
+      series.forEach((s) => { if (r[s.key] === undefined) return; const line = document.createElement('div'); line.className = 'r'; const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = s.color;
+        const t = document.createElement('span'); t.textContent = s.label + ' ' + F.pct1(r[s.key]); line.append(sw, t); tip.appendChild(line); });
+      tip.hidden = false; const bw = box.clientWidth, px = (x(r.date) / W) * bw;
+      tip.style.left = Math.max(0, Math.min(bw - tip.offsetWidth, px + 10)) + 'px'; tip.style.top = '10px';
+    })
+    .on('mouseleave', () => { tip.hidden = true; rule.attr('visibility', 'hidden'); dots.forEach((d) => d.attr('visibility', 'hidden')); });
+});
+
+dash.onData(() => {
+  const F = window.lxFmt;
+  const p = dash.data('pasar');
+  const box = document.getElementById('chart-pasar'); box.textContent = '';
+  if (p.status !== 'ok') { if (p.status === 'error') { const d = document.createElement('div'); d.className = 'lx-fail'; d.style.minHeight = '240px'; d.textContent = 'Failed to load'; box.appendChild(d); } return; }
+  const rows = p.data.filter((r) => F.isNum(r.breadth_ma5)).map((r) => ({ date: new Date(r.tanggal + 'T00:00:00Z'), tanggal: r.tanggal, v: Number(r.breadth_ma5), chg: Number(r.ubah_10hari_poin), rem: String(r.rem_aktif) === '1' }));
+  if (!rows.length) return;
+  const W = Math.max(280, box.clientWidth), H = 240, ml = 40, mr = 12;
+  const x = d3.scaleUtc(d3.extent(rows, (r) => r.date), [ml, W - mr]); const y = d3.scaleLinear([0, 100], [H - 26, 10]);
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Persentase saham di atas MA20 dan rem');
+  const dayW = Math.max(1.5, (W - ml - mr) / rows.length);
+  rows.forEach((r) => { if (r.rem) svg.append('rect').attr('x', x(r.date) - dayW / 2).attr('width', dayW).attr('y', 10).attr('height', H - 36).attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.35); });
+  [0, 20, 30, 50, 100].forEach((t) => {
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(t)).attr('y2', y(t)).attr('stroke', t === 20 || t === 30 ? 'var(--cds-chart-reference)' : 'var(--cds-chart-grid)').attr('stroke-dasharray', t === 20 || t === 30 ? '4 4' : null);
+    svg.append('text').attr('x', ml - 6).attr('y', y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(t + '%');
+  });
+  const mfmt = (d) => d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  x.ticks(W < 480 ? 4 : 7).forEach((t) => svg.append('text').attr('x', x(t)).attr('y', H - 6).attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').attr('font-size', 11).text(mfmt(t)));
+  svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x((r) => x(r.date)).y((r) => y(r.v)));
+  const tip = document.createElement('div'); tip.className = 'lx-tip'; tip.hidden = true; box.appendChild(tip);
+  const dot = svg.append('circle').attr('r', 3.5).attr('fill', dash.colors[0]).attr('visibility', 'hidden');
+  const bis = d3.bisector((r) => r.date).center;
+  svg.append('rect').attr('x', ml).attr('y', 0).attr('width', W - ml - mr).attr('height', H).attr('fill', 'transparent')
+    .on('mousemove', (ev) => {
+      const [mx] = d3.pointer(ev); const r = rows[bis(rows, x.invert(mx))];
+      dot.attr('cx', x(r.date)).attr('cy', y(r.v)).attr('visibility', 'visible');
+      tip.textContent = ''; const d1 = document.createElement('div'); d1.className = 'd'; d1.textContent = F.date(r.tanggal);
+      const d2 = document.createElement('div'); d2.textContent = 'Di atas MA20 (rata 5 hari): ' + F.plain1(r.v);
+      const d3_ = document.createElement('div'); d3_.textContent = 'Berubah 10 hari: ' + (F.isNum(r.chg) ? (r.chg > 0 ? '+' : '') + F.dec1(r.chg) + ' poin' : '–') + (r.rem ? ' · rem aktif' : '');
+      tip.append(d1, d2, d3_); tip.hidden = false; const bw = box.clientWidth, px = (x(r.date) / W) * bw;
+      tip.style.left = Math.max(0, Math.min(bw - tip.offsetWidth, px + 10)) + 'px'; tip.style.top = '8px';
+    })
+    .on('mouseleave', () => { tip.hidden = true; dot.attr('visibility', 'hidden'); });
+});
+
+window.lxOn(() => {
+  const F = window.lxFmt;
+  const b = window.lxRows('pivot_bulanan'); const strat = window.lxStratOrder();
+  const th = document.getElementById('th-bulanan'); const tb = document.getElementById('tb-bulanan'); th.textContent = ''; tb.textContent = '';
+  if (!b || !strat.length) return;
+  const cols = [['bulan', 'Bulan']].concat(strat.map((s) => ['k' + s.id, s.name]), [['total', '5 strategi'], ['top5', 'Top 5 gabungan']]);
+  cols.forEach(([k, lbl]) => { const h = document.createElement('th'); h.dataset.field = k; h.textContent = lbl; th.appendChild(h); });
+  const mname = (s) => new Date(s + '-01T00:00:00Z').toLocaleDateString('id-ID', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  b.forEach((r) => {
+    const tr = document.createElement('tr'); tr.dataset.key = [r.jenis, r.tier, r.bulan].map(encodeURIComponent).join(',');
+    cols.forEach(([k]) => {
+      const td = document.createElement('td');
+      if (k === 'bulan') td.textContent = mname(r.bulan);
+      else if (r[k] === null || r[k] === undefined) { td.textContent = '–'; td.title = 'Tidak ada transaksi'; }
+      else { td.textContent = F.pct1(r[k]); td.className = F.cls(r[k]); }
+      if (k === 'top5') td.style.fontWeight = 'var(--cds-font-weight-medium)';
+      if (r.bulan === '2026-05') td.style.background = 'color-mix(in srgb, var(--cds-chart-muted) 18%, transparent)';
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+});
+
+(function () {
+  const COLS = [
+    ['tanggal_sinyal', 'Tgl sinyal', 'date'], ['strategi', 'Strategi', 'text'], ['saham', 'Saham', 'text'], ['tanggal_beli', 'Tgl beli', 'date'], ['tanggal_jual', 'Tgl jual', 'date'],
+    ['lama_hold', 'Hari', 'int'], ['closing', 'Closing', 'int'], ['harga_beli', 'Beli', 'int'], ['tp', 'TP', 'int'], ['sl', 'SL', 'int'],
+    ['tp_pct', 'TP %', 'tp'], ['sl_pct', 'SL %', 'sl'], ['pl_pct', 'P/L', 'pl'], ['nilai_tx_miliar', 'Nilai tx (M)', 'dec'], ['keluar', 'Keluar karena', 'text'],
+  ];
+  const NUM = new Set(['id', 'lama_hold', 'closing', 'harga_beli', 'tp', 'sl', 'tp_pct', 'sl_pct', 'pl_pct', 'nilai_tx_miliar']);
+  const MAXROWS = 1500;
+  function makeTable(cfg) {
+    const state = { key: 'tanggal_sinyal', dir: -1, q: '', sid: '' };
+    const table = document.getElementById(cfg.table);
+    const thead = document.createElement('thead'); const hr = document.createElement('tr');
+    COLS.forEach(([k, lbl, kind]) => { const th = document.createElement('th'); th.dataset.field = k; if (kind === 'text') th.className = 'l';
+      const bt = document.createElement('button'); bt.textContent = lbl; bt.dataset.k = k; th.appendChild(bt); hr.appendChild(th); });
+    thead.appendChild(hr); const tbody = document.createElement('tbody'); table.append(thead, tbody);
+    const sel = document.getElementById(cfg.select);
+    const draw = () => {
+      const F = window.lxFmt; const all = window.lxRows(cfg.source);
+      tbody.textContent = '';
+      if (!all) return;
+      if (sel.dataset.tier !== window.lxTier + window.lxJenis) {
+        const keep = sel.value; sel.length = 1; const names = {};
+        all.forEach((r) => (names[r.id] = r.strategi));
+        Object.keys(names).sort((a, b) => a - b).forEach((id) => { const o = document.createElement('option'); o.value = id; o.textContent = names[id]; sel.appendChild(o); });
+        sel.value = names[keep] ? keep : ''; state.sid = sel.value; sel.dataset.tier = window.lxTier + window.lxJenis;
+      }
+      let rows = all.filter((r) => (!state.q || r.saham.toLowerCase().includes(state.q)) && (!state.sid || String(r.id) === state.sid));
+      rows = rows.slice().sort((a, b) => {
+        const av = NUM.has(state.key) ? Number(a[state.key]) : a[state.key], bv = NUM.has(state.key) ? Number(b[state.key]) : b[state.key];
+        if (av < bv) return -state.dir; if (av > bv) return state.dir; return a.saham < b.saham ? -1 : 1;
+      });
+      const shown = rows.slice(0, MAXROWS);
+      document.getElementById(cfg.count).textContent = F.int(rows.length) + ' transaksi' + (rows.length > MAXROWS ? ' (ditampilkan ' + F.int(MAXROWS) + ' teratas; cari saham untuk mempersempit)' : '');
+      const frag = document.createDocumentFragment();
+      shown.forEach((r) => {
+        const tr = document.createElement('tr'); tr.dataset.key = cfg.key(r).map(encodeURIComponent).join(',');
+        COLS.forEach(([k, , kind]) => {
+          const td = document.createElement('td'); const v = r[k];
+          if (kind === 'date') td.textContent = F.date(v);
+          else if (kind === 'sid') td.textContent = 'S' + v;
+          else if (kind === 'int') td.textContent = F.int(v);
+          else if (kind === 'dec') td.textContent = F.dec2(v);
+          else if (kind === 'tp') td.textContent = '+' + F.plain1(v);
+          else if (kind === 'sl') td.textContent = '−' + F.plain1(v);
+          else if (kind === 'pl') { td.textContent = F.pct2(v); td.className = F.cls(v); }
+          else { td.textContent = v; td.className = 'l'; }
+          tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      table.querySelectorAll('th').forEach((th) => th.setAttribute('aria-sort', th.dataset.field === state.key ? (state.dir > 0 ? 'ascending' : 'descending') : 'none'));
+    };
+    document.getElementById(cfg.search).addEventListener('input', (e) => { state.q = e.target.value.trim().toLowerCase(); draw(); });
+    sel.addEventListener('change', (e) => { state.sid = e.target.value; draw(); });
+    table.querySelectorAll('th button').forEach((btn) => btn.addEventListener('click', () => {
+      const k = btn.dataset.k; if (state.key === k) state.dir = -state.dir; else { state.key = k; state.dir = (k === 'saham' || k === 'keluar') ? 1 : -1; } draw();
+    }));
+    window.lxOn(draw);
+  }
+  makeTable({ table: 't-top5', source: 'top5_gabungan', select: 'pilih-g', search: 'cari-g', count: 'jumlah-g', key: (r) => [r.jenis, r.tier, r.tanggal_sinyal, r.saham] });
+  makeTable({ table: 't-transaksi', source: 'transaksi', select: 'pilih-s', search: 'cari-s', count: 'jumlah-s', key: (r) => [r.jenis, r.tier, r.tanggal_sinyal, r.id, r.saham] });
+})();
+</script>

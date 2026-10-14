@@ -1,0 +1,38 @@
+{
+ "profit": {
+  "squeeze & near_ma20 & p<200": 1,
+  "up3 & rsi<35 & p<200": 2,
+  "rsi<35 & engulf": 3,
+  "cpos_lo & gapdown_today": 4,
+  "down3 & red2 & rsi<35": 5,
+  "upstreak3 & pos60_lo & inside": 6,
+  "squeeze & upstreak3 & pos60_lo": 7,
+  "lwick & gapdown_today": 8,
+  "rsi<35 & volhi": 9,
+  "squeeze & pos60_lo & hl_rise": 10,
+  "downtrend & rsi<35 & engulf": 11,
+  "up3 & squeeze & pos60_lo": 12,
+  "dry5 & lwick & nr7": 13,
+  "squeeze & pos60_lo & gain60_lo": 14,
+  "up3 & pos60_lo & reversal": 15,
+  "lwick & pos60_lo & nr7": 16
+ },
+ "winrate": {
+  "upstreak3 & rsi<35": 101,
+  "pullback_up & gain60_lo": 102,
+  "gapdown_today & gain60_lo": 103,
+  "rsi<30 & gapdown_today": 104,
+  "reversal & p<200": 105,
+  "squeeze & gapdown_today": 106,
+  "volhi & pullback_up": 107,
+  "rsi<30 & hl_rise": 108,
+  "upstreak3 & gain60_lo": 109,
+  "rsi<30 & p<200": 110,
+  "reversal & gain60_lo": 111,
+  "gapdown_today & nr7": 112,
+  "pos60_lo & reversal": 113,
+  "squeeze & gain60_lo": 114,
+  "vollo & gapdown_today": 115,
+  "pos60_lo & engulf": 116
+ }
+}

@@ -114,7 +114,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
     val tier by RadarRepo.tier.collectAsStateWithLifecycle()
     val ledgers by RadarRepo.ledgers.collectAsStateWithLifecycle()
     val items by Graph.history.items.collectAsStateWithLifecycle()
-    var jenisIdx by rememberSaveable { mutableIntStateOf(0) }
+    var jenisIdx by rememberSaveable { mutableIntStateOf(if (RadarRepo.jenis == "winrate") 1 else 0) }
     var sel by rememberSaveable { mutableIntStateOf(0) } // 0 = top 5 gabungan, else strategy id
     var showLegacy by remember { mutableStateOf(false) }
     LaunchedEffect(tier) { RadarRepo.refreshLedger(tier) }
@@ -134,7 +134,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
-        item { Segmented(listOf("Profit tinggi", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0 }) }
+        item { Segmented(listOf("Profit tinggi", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0; RadarRepo.jenis = if (it == 1) "winrate" else "profit" }) }
         item {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip("Top 5 gabungan", sel == 0, Lumi.Sky, null) { sel = 0 }

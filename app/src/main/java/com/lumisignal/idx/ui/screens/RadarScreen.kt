@@ -99,7 +99,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
     val state by RadarRepo.state.collectAsStateWithLifecycle()
     val tier by RadarRepo.tier.collectAsStateWithLifecycle()
     var stage by rememberSaveable { mutableIntStateOf(initialStage) }
-    var jenis by rememberSaveable { mutableStateOf(initialJenis.ifBlank { "profit" }) }
+    var jenis by rememberSaveable { mutableStateOf(initialJenis.ifBlank { RadarRepo.jenis }) }
     var scanDone by rememberSaveable { mutableStateOf(initialStage != STAGE_SCAN) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
@@ -147,7 +147,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
                 }
             }
             stage == STAGE_TIER || stage == STAGE_SCAN -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
-            stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; stage = STAGE_RESULT }
+            stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; RadarRepo.jenis = it; stage = STAGE_RESULT }
             else -> ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
         }
     }

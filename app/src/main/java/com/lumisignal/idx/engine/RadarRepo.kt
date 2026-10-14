@@ -84,6 +84,11 @@ object RadarRepo {
 
     private fun prefs() = appContext.getSharedPreferences("lumi_radar", Context.MODE_PRIVATE)
 
+    /** Last chosen signal type (screening and history open on it). */
+    var jenis: String
+        get() = prefs().getString("jenis", "profit") ?: "profit"
+        set(v) = prefs().edit().putString("jenis", v).apply()
+
     fun setTier(t: String) {
         if (t !in TIER_KEYS) return
         _tier.value = t

@@ -1,0 +1,61 @@
+name: Radar Besok
+
+# Daily screening of every IDX stock with the calibrated "Radar Besok" strategies. Runs after the close
+# (17:40 WIB, again at 19:10 WIB as a fallback) and publishes the results to the `market-data` branch,
+# where the Lumi Signal app reads them without any login.
+on:
+  schedule:
+    - cron: "40 10 * * 1-5"
+    - cron: "10 12 * * 1-5"
+  workflow_dispatch:
+  push:
+    branches: [radar-dev]
+    paths: ["tools/radar/**", ".github/workflows/radar.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RADAR_DIR: ${{ github.ref == 'refs/heads/radar-dev' && 'radar-dev' || 'radar' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install pandas==3.0.5 numpy==2.5.3 websocket-client==1.8.0
+
+      - name: Checkout market-data
+        run: |
+          git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
+          mkdir -p "data/$RADAR_DIR/picks"
+
+      - name: Fetch daily bars (TradingView)
+        run: |
+          python tools/radar/fetch_tv.py --bars bars.csv.gz --names names.csv --cache "data/$RADAR_DIR/bars.csv.gz"
+
+      - name: Run radar
+        run: |
+          python tools/radar/radar.py --bars bars.csv.gz --names names.csv --picks "data/$RADAR_DIR/picks" --out out
+
+      - name: Publish to market-data
+        run: |
+          cp out/latest.json out/stocks.json out/ledger_*.json "data/$RADAR_DIR/"
+          cp out/picks/*.json "data/$RADAR_DIR/picks/"
+          cp bars.csv.gz names.csv "data/$RADAR_DIR/"
+          cd data
+          git config user.name "lumi-ci"
+          git config user.email "lumi-ci@users.noreply.github.com"
+          git add -A "$RADAR_DIR"
+          git commit -qm "Radar $(python3 -c "import json;print(json.load(open('$RADAR_DIR/latest.json'))['date'])") ($(date -u +%FT%TZ))" || { echo "no change"; exit 0; }
+          for i in 1 2 3; do git push -q origin HEAD:market-data && break; git pull -q --rebase origin market-data; done

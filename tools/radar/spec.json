@@ -1,0 +1,1618 @@
+{
+ "version": 1,
+ "calibrated": "v9 · 13 Okt 2025 – 13 Okt 2026",
+ "go_live": "2026-10-14",
+ "tiers": [
+  {
+   "key": "semua",
+   "label": "Tanpa minimal"
+  },
+  {
+   "key": "250jt",
+   "label": "≥ Rp250 jt"
+  },
+  {
+   "key": "1M",
+   "label": "≥ Rp1 M"
+  },
+  {
+   "key": "5M",
+   "label": "≥ Rp5 M"
+  },
+  {
+   "key": "20M",
+   "label": "≥ Rp20 M"
+  }
+ ],
+ "tier_min": {
+  "semua": 0,
+  "250jt": 250000000.0,
+  "1M": 1000000000.0,
+  "5M": 5000000000.0,
+  "20M": 20000000000.0
+ },
+ "jenis": [
+  {
+   "key": "profit",
+   "label": "Profit besar",
+   "desc": "Target lebar dari ATR atau resisten, winrate sekitar 40–50% tapi untungnya besar."
+  },
+  {
+   "key": "winrate",
+   "label": "Winrate tinggi",
+   "desc": "TP kecil minimal 3% yang sering tersentuh, winrate sekitar 75–80%."
+  }
+ ],
+ "strategies": {
+  "1": {
+   "id": 1,
+   "jenis": "profit",
+   "name": "Squeeze di MA20",
+   "desc": "Bollinger menyempit; harga dekat MA20 (-3% s.d. +2%); harga 61-199",
+   "cond": "squeeze & near_ma20 & p<200",
+   "icon": "squeeze",
+   "color": "#FF9F43"
+  },
+  "2": {
+   "id": 2,
+   "jenis": "profit",
+   "name": "Pantulan Hijau",
+   "desc": "Naik 3% atau lebih hari ini; RSI14 di bawah 35; harga 61-199",
+   "cond": "up3 & rsi<35 & p<200",
+   "icon": "bounce",
+   "color": "#2BD9A0"
+  },
+  "3": {
+   "id": 3,
+   "jenis": "profit",
+   "name": "Engulfing Oversold",
+   "desc": "RSI14 di bawah 35; candle hijau menelan candle merah kemarin (bullish engulfing)",
+   "cond": "rsi<35 & engulf",
+   "icon": "engulf",
+   "color": "#FF5C8A"
+  },
+  "4": {
+   "id": 4,
+   "jenis": "profit",
+   "name": "Gap Turun Tutup Lemah",
+   "desc": "Dibuka gap turun 3% atau lebih; closing di 35% terbawah range harian",
+   "cond": "cpos_lo & gapdown_today",
+   "icon": "gapfill",
+   "color": "#F7B731"
+  },
+  "5": {
+   "id": 5,
+   "jenis": "profit",
+   "name": "Jual Panik Beruntun",
+   "desc": "Turun 3% atau lebih hari ini; merah 2 hari atau lebih berturut-turut; RSI14 di bawah 35",
+   "cond": "down3 & red2 & rsi<35",
+   "icon": "bolt",
+   "color": "#FF6B4A"
+  },
+  "6": {
+   "id": 6,
+   "jenis": "profit",
+   "name": "Naik Pelan dari Dasar",
+   "desc": "Naik 3 hari beruntun; posisi di 30% terbawah range 60 hari; inside day",
+   "cond": "upstreak3 & pos60_lo & inside",
+   "icon": "stairs",
+   "color": "#4CD3C2"
+  },
+  "7": {
+   "id": 7,
+   "jenis": "profit",
+   "name": "Squeeze Naik Beruntun",
+   "desc": "Bollinger menyempit; naik 3 hari beruntun; posisi di 30% terbawah range 60 hari",
+   "cond": "squeeze & upstreak3 & pos60_lo",
+   "icon": "spring",
+   "color": "#A3E635"
+  },
+  "8": {
+   "id": 8,
+   "jenis": "profit",
+   "name": "Pantulan Pasar Panik",
+   "desc": "Dibuka gap turun 3% atau lebih; ekor bawah panjang (3% atau lebih)",
+   "cond": "lwick & gapdown_today",
+   "icon": "parachute",
+   "color": "#FF8FB1"
+  },
+  "9": {
+   "id": 9,
+   "jenis": "profit",
+   "name": "Oversold Volume Besar",
+   "desc": "RSI14 di bawah 35; volume 2x rata-rata 20 hari atau lebih",
+   "cond": "rsi<35 & volhi",
+   "icon": "volume",
+   "color": "#FFC14D"
+  },
+  "10": {
+   "id": 10,
+   "jenis": "profit",
+   "name": "Squeeze Higher Low",
+   "desc": "Bollinger menyempit; posisi di 30% terbawah range 60 hari; low naik 2 hari berturut-turut",
+   "cond": "squeeze & pos60_lo & hl_rise",
+   "icon": "higherlow",
+   "color": "#5EEAD4"
+  },
+  "11": {
+   "id": 11,
+   "jenis": "profit",
+   "name": "Engulfing di Tren Turun",
+   "desc": "MA20 di bawah MA50; RSI14 di bawah 35; bullish engulfing",
+   "cond": "downtrend & rsi<35 & engulf",
+   "icon": "uturn",
+   "color": "#F472B6"
+  },
+  "12": {
+   "id": 12,
+   "jenis": "profit",
+   "name": "Squeeze Meledak dari Dasar",
+   "desc": "Bollinger menyempit; naik 3% atau lebih hari ini; posisi di 30% terbawah range 60 hari",
+   "cond": "up3 & squeeze & pos60_lo",
+   "icon": "rocket",
+   "color": "#FB923C"
+  },
+  "13": {
+   "id": 13,
+   "jenis": "profit",
+   "name": "Kering + Ekor Bawah",
+   "desc": "Volume 5 hari di bawah 0,7x rata-rata 20 hari; ekor bawah panjang (3% atau lebih); range harian tersempit dalam 7 hari (NR7)",
+   "cond": "dry5 & lwick & nr7",
+   "icon": "drop",
+   "color": "#60A5FA"
+  },
+  "14": {
+   "id": 14,
+   "jenis": "profit",
+   "name": "Squeeze di Dasar setelah Koreksi",
+   "desc": "Bollinger menyempit; posisi di 30% terbawah range 60 hari; turun lebih dari 20% dalam 60 hari",
+   "cond": "squeeze & pos60_lo & gain60_lo",
+   "icon": "diamond",
+   "color": "#C084FC"
+  },
+  "15": {
+   "id": 15,
+   "jenis": "profit",
+   "name": "Reversal dari Dasar",
+   "desc": "Kemarin turun 3% atau lebih; hari ini naik 3% atau lebih dan closing di atas high kemarin; posisi di 30% terbawah range 60 hari",
+   "cond": "up3 & pos60_lo & reversal",
+   "icon": "sprout",
+   "color": "#34D399"
+  },
+  "16": {
+   "id": 16,
+   "jenis": "profit",
+   "name": "Ekor Bawah di Dasar",
+   "desc": "Ekor bawah panjang (3% atau lebih); posisi di 30% terbawah range 60 hari; range harian tersempit dalam 7 hari (NR7)",
+   "cond": "lwick & pos60_lo & nr7",
+   "icon": "anchor",
+   "color": "#38BDF8"
+  },
+  "101": {
+   "id": 101,
+   "jenis": "winrate",
+   "name": "Naik Beruntun dari Oversold",
+   "desc": "Naik 3 hari beruntun; RSI14 masih di bawah 35",
+   "cond": "upstreak3 & rsi<35",
+   "icon": "sunrise",
+   "color": "#FDBA74"
+  },
+  "102": {
+   "id": 102,
+   "jenis": "winrate",
+   "name": "Pullback setelah Koreksi Dalam",
+   "desc": "Turun lebih dari 20% dalam 60 hari; MA20 di atas MA50 dan MA20 naik; harga koreksi ke MA20 (0 s.d. -5% di bawah MA20); hari ini tidak naik lebih dari 2%",
+   "cond": "pullback_up & gain60_lo",
+   "icon": "wave",
+   "color": "#22D3EE"
+  },
+  "103": {
+   "id": 103,
+   "jenis": "winrate",
+   "name": "Gap Turun setelah Koreksi Dalam",
+   "desc": "Turun lebih dari 20% dalam 60 hari; dibuka gap turun 3% atau lebih",
+   "cond": "gapdown_today & gain60_lo",
+   "icon": "magnet",
+   "color": "#F87171"
+  },
+  "104": {
+   "id": 104,
+   "jenis": "winrate",
+   "name": "Gap Turun Sangat Oversold",
+   "desc": "RSI14 di bawah 30; dibuka gap turun 3% atau lebih",
+   "cond": "rsi<30 & gapdown_today",
+   "icon": "snowflake",
+   "color": "#93C5FD"
+  },
+  "105": {
+   "id": 105,
+   "jenis": "winrate",
+   "name": "Reversal Murah",
+   "desc": "Kemarin turun 3% atau lebih, hari ini naik 2% atau lebih dan closing di atas high kemarin; harga 61-199",
+   "cond": "reversal & p<200",
+   "icon": "coin",
+   "color": "#FACC15"
+  },
+  "106": {
+   "id": 106,
+   "jenis": "winrate",
+   "name": "Squeeze Digoyang Gap Turun",
+   "desc": "Bollinger menyempit; dibuka gap turun 3% atau lebih",
+   "cond": "squeeze & gapdown_today",
+   "icon": "hourglass",
+   "color": "#E879F9"
+  },
+  "107": {
+   "id": 107,
+   "jenis": "winrate",
+   "name": "Pullback Bervolume",
+   "desc": "MA20 di atas MA50 dan MA20 naik; harga koreksi ke MA20 (0 s.d. -5% di bawah MA20); hari ini tidak naik lebih dari 2%; volume 2x rata-rata 20 hari atau lebih",
+   "cond": "volhi & pullback_up",
+   "icon": "pulse",
+   "color": "#FB7185"
+  },
+  "108": {
+   "id": 108,
+   "jenis": "winrate",
+   "name": "Higher Low Sangat Oversold",
+   "desc": "RSI14 di bawah 30; low naik 2 hari berturut-turut",
+   "cond": "rsi<30 & hl_rise",
+   "icon": "mountain",
+   "color": "#86EFAC"
+  },
+  "109": {
+   "id": 109,
+   "jenis": "winrate",
+   "name": "Naik Beruntun setelah Koreksi",
+   "desc": "Turun lebih dari 20% dalam 60 hari; naik 3 hari beruntun",
+   "cond": "upstreak3 & gain60_lo",
+   "icon": "flag",
+   "color": "#FCA5A5"
+  },
+  "110": {
+   "id": 110,
+   "jenis": "winrate",
+   "name": "Sangat Oversold Murah",
+   "desc": "RSI14 di bawah 30; harga 61-199",
+   "cond": "rsi<30 & p<200",
+   "icon": "tag",
+   "color": "#FDE047"
+  },
+  "111": {
+   "id": 111,
+   "jenis": "winrate",
+   "name": "Reversal setelah Koreksi",
+   "desc": "Turun lebih dari 20% dalam 60 hari; kemarin turun 3% atau lebih, hari ini naik 2% atau lebih dan closing di atas high kemarin",
+   "cond": "reversal & gain60_lo",
+   "icon": "boomerang",
+   "color": "#A78BFA"
+  },
+  "112": {
+   "id": 112,
+   "jenis": "winrate",
+   "name": "Gap Turun Range Sempit",
+   "desc": "Dibuka gap turun 3% atau lebih; range harian tersempit dalam 7 hari (NR7)",
+   "cond": "gapdown_today & nr7",
+   "icon": "target",
+   "color": "#F97316"
+  },
+  "113": {
+   "id": 113,
+   "jenis": "winrate",
+   "name": "Reversal di Dasar",
+   "desc": "Posisi di 30% terbawah range 60 hari; kemarin turun 3% atau lebih, hari ini naik 2% atau lebih dan closing di atas high kemarin",
+   "cond": "pos60_lo & reversal",
+   "icon": "compass",
+   "color": "#2DD4BF"
+  },
+  "114": {
+   "id": 114,
+   "jenis": "winrate",
+   "name": "Squeeze setelah Koreksi Dalam",
+   "desc": "Turun lebih dari 20% dalam 60 hari; Bollinger menyempit",
+   "cond": "squeeze & gain60_lo",
+   "icon": "crown",
+   "color": "#FBBF24"
+  },
+  "115": {
+   "id": 115,
+   "jenis": "winrate",
+   "name": "Gap Turun Volume Sepi",
+   "desc": "Dibuka gap turun 3% atau lebih; volume di bawah 0,8x rata-rata 20 hari",
+   "cond": "vollo & gapdown_today",
+   "icon": "moon",
+   "color": "#C4B5FD"
+  },
+  "116": {
+   "id": 116,
+   "jenis": "winrate",
+   "name": "Engulfing di Dasar",
+   "desc": "Posisi di 30% terbawah range 60 hari; bullish engulfing",
+   "cond": "pos60_lo & engulf",
+   "icon": "pacman",
+   "color": "#4ADE80"
+  }
+ },
+ "boards": {
+  "semua": {
+   "profit": {
+    "strategies": [
+     {
+      "id": 1,
+      "cond": "squeeze & near_ma20 & p<200",
+      "reg": "ret",
+      "exit": "low5/3atr",
+      "rank": "volratio",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 532,
+       "winrate": 51.7,
+       "kena_tp": 27.1,
+       "akumulasi_pl": 1703.6,
+       "rata_pl": 3.2,
+       "max_drawdown": -128.5,
+       "hold_rata": 4.8,
+       "tp_rata": 15.0,
+       "sl_rata": 5.4,
+       "uji_akumulasi_pl": 726.3
+      }
+     },
+     {
+      "id": 2,
+      "cond": "up3 & rsi<35 & p<200",
+      "reg": "all",
+      "exit": "low5/3atr",
+      "rank": "rsi_low",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 86,
+       "winrate": 57.0,
+       "kena_tp": 29.1,
+       "akumulasi_pl": 637.7,
+       "rata_pl": 7.41,
+       "max_drawdown": -55.7,
+       "hold_rata": 4.5,
+       "tp_rata": 27.9,
+       "sl_rata": 9.9,
+       "uji_akumulasi_pl": 65.9
+      }
+     },
+     {
+      "id": 3,
+      "cond": "rsi<35 & engulf",
+      "reg": "ret",
+      "exit": "low5/res",
+      "rank": "volratio",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 131,
+       "winrate": 48.1,
+       "kena_tp": 16.8,
+       "akumulasi_pl": 462.6,
+       "rata_pl": 3.53,
+       "max_drawdown": -58.4,
+       "hold_rata": 5.2,
+       "tp_rata": 24.9,
+       "sl_rata": 6.8,
+       "uji_akumulasi_pl": 47.7
+      }
+     },
+     {
+      "id": 4,
+      "cond": "cpos_lo & gapdown_today",
+      "reg": "weak30",
+      "exit": "low10/res",
+      "rank": "lowpos",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 30% saham di atas MA20",
+      "exit_text": "SL di bawah low 10 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": true,
+      "stats": {
+       "trades": 218,
+       "winrate": 38.1,
+       "kena_tp": 16.5,
+       "akumulasi_pl": 737.2,
+       "rata_pl": 3.38,
+       "max_drawdown": -139.8,
+       "hold_rata": 3.7,
+       "tp_rata": 27.3,
+       "sl_rata": 6.1,
+       "uji_akumulasi_pl": 11.4
+      }
+     },
+     {
+      "id": 5,
+      "cond": "down3 & red2 & rsi<35",
+      "reg": "weak20",
+      "exit": "low5/3atr",
+      "rank": "value",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": true,
+      "stats": {
+       "trades": 147,
+       "winrate": 33.3,
+       "kena_tp": 14.3,
+       "akumulasi_pl": 380.5,
+       "rata_pl": 2.59,
+       "max_drawdown": -73.3,
+       "hold_rata": 3.2,
+       "tp_rata": 25.9,
+       "sl_rata": 5.0,
+       "uji_akumulasi_pl": 17.8
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 810,
+     "winrate": 46.4,
+     "akumulasi_pl": 2670.4,
+     "rata_pl": 3.3,
+     "max_drawdown": -124.6,
+     "kena_tp": 22.8
+    }
+   },
+   "winrate": {
+    "strategies": [
+     {
+      "id": 101,
+      "cond": "upstreak3 & rsi<35",
+      "reg": "ret",
+      "exit": "tp3/sl8/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 48,
+       "winrate": 83.3,
+       "kena_tp": 79.2,
+       "akumulasi_pl": 85.8,
+       "rata_pl": 1.79,
+       "max_drawdown": -12.5,
+       "hold_rata": 2.7,
+       "tp_rata": 3.4,
+       "sl_rata": 8.3,
+       "uji_akumulasi_pl": 13.0
+      }
+     },
+     {
+      "id": 102,
+      "cond": "pullback_up & gain60_lo",
+      "reg": "br30",
+      "exit": "tp4/sl10/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 129,
+       "winrate": 80.6,
+       "kena_tp": 78.3,
+       "akumulasi_pl": 330.1,
+       "rata_pl": 2.56,
+       "max_drawdown": -20.6,
+       "hold_rata": 3.6,
+       "tp_rata": 4.4,
+       "sl_rata": 10.4,
+       "uji_akumulasi_pl": 264.7
+      }
+     },
+     {
+      "id": 103,
+      "cond": "gapdown_today & gain60_lo",
+      "reg": "ret",
+      "exit": "tp3/sl8/7h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 260,
+       "winrate": 77.7,
+       "kena_tp": 76.9,
+       "akumulasi_pl": 245.6,
+       "rata_pl": 0.94,
+       "max_drawdown": -39.6,
+       "hold_rata": 2.1,
+       "tp_rata": 3.4,
+       "sl_rata": 8.3,
+       "uji_akumulasi_pl": 61.8
+      }
+     },
+     {
+      "id": 104,
+      "cond": "rsi<30 & gapdown_today",
+      "reg": "all",
+      "exit": "tp4/sl10/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 129,
+       "winrate": 76.7,
+       "kena_tp": 74.4,
+       "akumulasi_pl": 169.4,
+       "rata_pl": 1.31,
+       "max_drawdown": -36.5,
+       "hold_rata": 2.2,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 44.3
+      }
+     },
+     {
+      "id": 105,
+      "cond": "reversal & p<200",
+      "reg": "weak20",
+      "exit": "tp3/sl8/7h",
+      "rank": "value",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": true,
+      "stats": {
+       "trades": 56,
+       "winrate": 78.6,
+       "kena_tp": 78.6,
+       "akumulasi_pl": 53.4,
+       "rata_pl": 0.95,
+       "max_drawdown": -28.5,
+       "hold_rata": 1.8,
+       "tp_rata": 3.5,
+       "sl_rata": 8.4,
+       "uji_akumulasi_pl": 4.0
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 473,
+     "winrate": 79.1,
+     "akumulasi_pl": 711.3,
+     "rata_pl": 1.5,
+     "max_drawdown": -64.1,
+     "kena_tp": 77.2
+    }
+   }
+  },
+  "250jt": {
+   "profit": {
+    "strategies": [
+     {
+      "id": 1,
+      "cond": "squeeze & near_ma20 & p<200",
+      "reg": "br30",
+      "exit": "low5/res",
+      "rank": "volratio",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 496,
+       "winrate": 50.6,
+       "kena_tp": 33.9,
+       "akumulasi_pl": 1376.8,
+       "rata_pl": 2.78,
+       "max_drawdown": -124.0,
+       "hold_rata": 4.3,
+       "tp_rata": 13.8,
+       "sl_rata": 5.6,
+       "uji_akumulasi_pl": 417.6
+      }
+     },
+     {
+      "id": 6,
+      "cond": "upstreak3 & pos60_lo & inside",
+      "reg": "ret",
+      "exit": "atr2/1.5",
+      "rank": "value",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 171,
+       "winrate": 54.4,
+       "kena_tp": 32.7,
+       "akumulasi_pl": 518.2,
+       "rata_pl": 3.03,
+       "max_drawdown": -55.3,
+       "hold_rata": 5.6,
+       "tp_rata": 13.9,
+       "sl_rata": 9.2,
+       "uji_akumulasi_pl": 79.7
+      }
+     },
+     {
+      "id": 7,
+      "cond": "squeeze & upstreak3 & pos60_lo",
+      "reg": "all",
+      "exit": "low5/3atr",
+      "rank": "volratio",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 138,
+       "winrate": 53.6,
+       "kena_tp": 26.1,
+       "akumulasi_pl": 454.0,
+       "rata_pl": 3.29,
+       "max_drawdown": -60.1,
+       "hold_rata": 5.8,
+       "tp_rata": 16.0,
+       "sl_rata": 8.5,
+       "uji_akumulasi_pl": 38.9
+      }
+     },
+     {
+      "id": 8,
+      "cond": "lwick & gapdown_today",
+      "reg": "weak20",
+      "exit": "atr3/1.5",
+      "rank": "volratio",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP = 3 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": true,
+      "stats": {
+       "trades": 101,
+       "winrate": 48.5,
+       "kena_tp": 22.8,
+       "akumulasi_pl": 342.3,
+       "rata_pl": 3.39,
+       "max_drawdown": -61.9,
+       "hold_rata": 5.0,
+       "tp_rata": 28.5,
+       "sl_rata": 12.0,
+       "uji_akumulasi_pl": 47.2
+      }
+     },
+     {
+      "id": 9,
+      "cond": "rsi<35 & volhi",
+      "reg": "weak20",
+      "exit": "atr3/1.5",
+      "rank": "rsi_low",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP = 3 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": true,
+      "stats": {
+       "trades": 142,
+       "winrate": 49.3,
+       "kena_tp": 21.8,
+       "akumulasi_pl": 394.9,
+       "rata_pl": 2.78,
+       "max_drawdown": -91.9,
+       "hold_rata": 4.9,
+       "tp_rata": 22.5,
+       "sl_rata": 10.1,
+       "uji_akumulasi_pl": 33.3
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 707,
+     "winrate": 50.4,
+     "akumulasi_pl": 1940.2,
+     "rata_pl": 2.74,
+     "max_drawdown": -122.5,
+     "kena_tp": 31.3
+    }
+   },
+   "winrate": {
+    "strategies": [
+     {
+      "id": 102,
+      "cond": "pullback_up & gain60_lo",
+      "reg": "br30",
+      "exit": "tp3/sl8/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 117,
+       "winrate": 85.5,
+       "kena_tp": 83.8,
+       "akumulasi_pl": 237.6,
+       "rata_pl": 2.03,
+       "max_drawdown": -16.3,
+       "hold_rata": 2.8,
+       "tp_rata": 3.4,
+       "sl_rata": 8.4,
+       "uji_akumulasi_pl": 191.3
+      }
+     },
+     {
+      "id": 106,
+      "cond": "squeeze & gapdown_today",
+      "reg": "ret",
+      "exit": "tp4/sl10/7h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 73,
+       "winrate": 76.7,
+       "kena_tp": 74.0,
+       "akumulasi_pl": 113.7,
+       "rata_pl": 1.56,
+       "max_drawdown": -79.5,
+       "hold_rata": 3.0,
+       "tp_rata": 4.4,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 34.6
+      }
+     },
+     {
+      "id": 107,
+      "cond": "volhi & pullback_up",
+      "reg": "ret",
+      "exit": "tp3/sl8/7h",
+      "rank": "volratio",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 144,
+       "winrate": 76.4,
+       "kena_tp": 66.7,
+       "akumulasi_pl": 205.7,
+       "rata_pl": 1.43,
+       "max_drawdown": -24.3,
+       "hold_rata": 3.6,
+       "tp_rata": 3.3,
+       "sl_rata": 8.3,
+       "uji_akumulasi_pl": 138.4
+      }
+     },
+     {
+      "id": 104,
+      "cond": "rsi<30 & gapdown_today",
+      "reg": "all",
+      "exit": "tp4/sl10/5h",
+      "rank": "volratio",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 5 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 81,
+       "winrate": 76.5,
+       "kena_tp": 72.8,
+       "akumulasi_pl": 94.6,
+       "rata_pl": 1.17,
+       "max_drawdown": -36.1,
+       "hold_rata": 1.8,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 29.2
+      }
+     },
+     {
+      "id": 105,
+      "cond": "reversal & p<200",
+      "reg": "weak20",
+      "exit": "tp3/sl8/7h",
+      "rank": "value",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": true,
+      "stats": {
+       "trades": 51,
+       "winrate": 78.4,
+       "kena_tp": 78.4,
+       "akumulasi_pl": 48.6,
+       "rata_pl": 0.95,
+       "max_drawdown": -27.4,
+       "hold_rata": 1.7,
+       "tp_rata": 3.5,
+       "sl_rata": 8.5,
+       "uji_akumulasi_pl": 0.9
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 392,
+     "winrate": 78.3,
+     "akumulasi_pl": 541.6,
+     "rata_pl": 1.38,
+     "max_drawdown": -43.8,
+     "kena_tp": 74.2
+    }
+   }
+  },
+  "1M": {
+   "profit": {
+    "strategies": [
+     {
+      "id": 1,
+      "cond": "squeeze & near_ma20 & p<200",
+      "reg": "ret",
+      "exit": "low5/res",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 426,
+       "winrate": 46.0,
+       "kena_tp": 26.1,
+       "akumulasi_pl": 1095.8,
+       "rata_pl": 2.57,
+       "max_drawdown": -84.3,
+       "hold_rata": 4.6,
+       "tp_rata": 16.0,
+       "sl_rata": 5.5,
+       "uji_akumulasi_pl": 320.2
+      }
+     },
+     {
+      "id": 7,
+      "cond": "squeeze & upstreak3 & pos60_lo",
+      "reg": "all",
+      "exit": "atr3/1.5",
+      "rank": "volratio",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 3 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 102,
+       "winrate": 53.9,
+       "kena_tp": 25.5,
+       "akumulasi_pl": 372.7,
+       "rata_pl": 3.65,
+       "max_drawdown": -45.7,
+       "hold_rata": 5.6,
+       "tp_rata": 15.6,
+       "sl_rata": 7.8,
+       "uji_akumulasi_pl": 16.4
+      }
+     },
+     {
+      "id": 10,
+      "cond": "squeeze & pos60_lo & hl_rise",
+      "reg": "ret",
+      "exit": "low10/res",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 10 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 260,
+       "winrate": 49.6,
+       "kena_tp": 25.8,
+       "akumulasi_pl": 600.0,
+       "rata_pl": 2.31,
+       "max_drawdown": -72.1,
+       "hold_rata": 5.4,
+       "tp_rata": 16.2,
+       "sl_rata": 8.2,
+       "uji_akumulasi_pl": 55.3
+      }
+     },
+     {
+      "id": 11,
+      "cond": "downtrend & rsi<35 & engulf",
+      "reg": "all",
+      "exit": "low5/3atr",
+      "rank": "lowpos",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 75,
+       "winrate": 45.3,
+       "kena_tp": 21.3,
+       "akumulasi_pl": 256.4,
+       "rata_pl": 3.42,
+       "max_drawdown": -43.4,
+       "hold_rata": 5.0,
+       "tp_rata": 22.5,
+       "sl_rata": 7.7,
+       "uji_akumulasi_pl": 51.9
+      }
+     },
+     {
+      "id": 4,
+      "cond": "cpos_lo & gapdown_today",
+      "reg": "weak30",
+      "exit": "low5/res",
+      "rank": "rsi_low",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 30% saham di atas MA20",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": true,
+      "stats": {
+       "trades": 146,
+       "winrate": 35.6,
+       "kena_tp": 17.8,
+       "akumulasi_pl": 568.4,
+       "rata_pl": 3.89,
+       "max_drawdown": -93.9,
+       "hold_rata": 3.4,
+       "tp_rata": 28.5,
+       "sl_rata": 5.8,
+       "uji_akumulasi_pl": 12.4
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 688,
+     "winrate": 41.4,
+     "akumulasi_pl": 1766.3,
+     "rata_pl": 2.57,
+     "max_drawdown": -100.5,
+     "kena_tp": 23.0
+    }
+   },
+   "winrate": {
+    "strategies": [
+     {
+      "id": 102,
+      "cond": "pullback_up & gain60_lo",
+      "reg": "ret",
+      "exit": "tp3/sl8/7h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 101,
+       "winrate": 83.2,
+       "kena_tp": 82.2,
+       "akumulasi_pl": 188.4,
+       "rata_pl": 1.87,
+       "max_drawdown": -16.9,
+       "hold_rata": 2.8,
+       "tp_rata": 3.4,
+       "sl_rata": 8.4,
+       "uji_akumulasi_pl": 152.5
+      }
+     },
+     {
+      "id": 104,
+      "cond": "rsi<30 & gapdown_today",
+      "reg": "all",
+      "exit": "tp4/sl10/7h",
+      "rank": "volratio",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 65,
+       "winrate": 80.0,
+       "kena_tp": 80.0,
+       "akumulasi_pl": 123.6,
+       "rata_pl": 1.9,
+       "max_drawdown": -17.5,
+       "hold_rata": 2.0,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 32.7
+      }
+     },
+     {
+      "id": 108,
+      "cond": "rsi<30 & hl_rise",
+      "reg": "ret",
+      "exit": "tp4/sl10/7h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 66,
+       "winrate": 77.3,
+       "kena_tp": 71.2,
+       "akumulasi_pl": 109.8,
+       "rata_pl": 1.66,
+       "max_drawdown": -20.7,
+       "hold_rata": 3.0,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 9.8
+      }
+     },
+     {
+      "id": 109,
+      "cond": "upstreak3 & gain60_lo",
+      "reg": "br30",
+      "exit": "tp3/sl8/7h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +3%, SL -8%, maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 198,
+       "winrate": 77.3,
+       "kena_tp": 76.8,
+       "akumulasi_pl": 175.4,
+       "rata_pl": 0.89,
+       "max_drawdown": -47.6,
+       "hold_rata": 2.2,
+       "tp_rata": 3.3,
+       "sl_rata": 8.3,
+       "uji_akumulasi_pl": 61.0
+      }
+     },
+     {
+      "id": 105,
+      "cond": "reversal & p<200",
+      "reg": "weak20",
+      "exit": "tp3/sl8/3h",
+      "rank": "value",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP +3%, SL -8%, maks 3 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": true,
+      "stats": {
+       "trades": 42,
+       "winrate": 78.6,
+       "kena_tp": 78.6,
+       "akumulasi_pl": 55.2,
+       "rata_pl": 1.31,
+       "max_drawdown": -11.5,
+       "hold_rata": 1.5,
+       "tp_rata": 3.5,
+       "sl_rata": 8.5,
+       "uji_akumulasi_pl": 1.3
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 404,
+     "winrate": 78.0,
+     "akumulasi_pl": 520.9,
+     "rata_pl": 1.29,
+     "max_drawdown": -42.7,
+     "kena_tp": 76.5
+    }
+   }
+  },
+  "5M": {
+   "profit": {
+    "strategies": [
+     {
+      "id": 12,
+      "cond": "up3 & squeeze & pos60_lo",
+      "reg": "ret",
+      "exit": "low5/3atr",
+      "rank": "value",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 121,
+       "winrate": 51.2,
+       "kena_tp": 25.6,
+       "akumulasi_pl": 445.5,
+       "rata_pl": 3.68,
+       "max_drawdown": -57.4,
+       "hold_rata": 5.5,
+       "tp_rata": 19.2,
+       "sl_rata": 9.0,
+       "uji_akumulasi_pl": 61.1
+      }
+     },
+     {
+      "id": 13,
+      "cond": "dry5 & lwick & nr7",
+      "reg": "ret",
+      "exit": "low5/3atr",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 81,
+       "winrate": 43.2,
+       "kena_tp": 24.7,
+       "akumulasi_pl": 360.9,
+       "rata_pl": 4.46,
+       "max_drawdown": -63.4,
+       "hold_rata": 4.7,
+       "tp_rata": 27.8,
+       "sl_rata": 8.5,
+       "uji_akumulasi_pl": 54.7
+      }
+     },
+     {
+      "id": 11,
+      "cond": "downtrend & rsi<35 & engulf",
+      "reg": "all",
+      "exit": "low5/3atr",
+      "rank": "value",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 53,
+       "winrate": 49.1,
+       "kena_tp": 24.5,
+       "akumulasi_pl": 218.3,
+       "rata_pl": 4.12,
+       "max_drawdown": -34.2,
+       "hold_rata": 5.1,
+       "tp_rata": 21.8,
+       "sl_rata": 7.6,
+       "uji_akumulasi_pl": 27.5
+      }
+     },
+     {
+      "id": 6,
+      "cond": "upstreak3 & pos60_lo & inside",
+      "reg": "all",
+      "exit": "atr2/1.5",
+      "rank": "volratio",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 2 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 61,
+       "winrate": 57.4,
+       "kena_tp": 31.1,
+       "akumulasi_pl": 187.7,
+       "rata_pl": 3.08,
+       "max_drawdown": -34.3,
+       "hold_rata": 6.0,
+       "tp_rata": 13.5,
+       "sl_rata": 9.0,
+       "uji_akumulasi_pl": 20.6
+      }
+     },
+     {
+      "id": 4,
+      "cond": "cpos_lo & gapdown_today",
+      "reg": "weak30",
+      "exit": "low5/res",
+      "rank": "rsi_low",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 30% saham di atas MA20",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": true,
+      "stats": {
+       "trades": 101,
+       "winrate": 42.6,
+       "kena_tp": 19.8,
+       "akumulasi_pl": 563.2,
+       "rata_pl": 5.58,
+       "max_drawdown": -38.3,
+       "hold_rata": 3.6,
+       "tp_rata": 29.1,
+       "sl_rata": 5.8,
+       "uji_akumulasi_pl": 25.7
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 367,
+     "winrate": 46.6,
+     "akumulasi_pl": 1490.0,
+     "rata_pl": 4.06,
+     "max_drawdown": -92.4,
+     "kena_tp": 24.3
+    }
+   },
+   "winrate": {
+    "strategies": [
+     {
+      "id": 102,
+      "cond": "pullback_up & gain60_lo",
+      "reg": "ret",
+      "exit": "tp4/sl10/7h",
+      "rank": "volratio",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": false,
+      "stats": {
+       "trades": 62,
+       "winrate": 83.9,
+       "kena_tp": 82.3,
+       "akumulasi_pl": 171.6,
+       "rata_pl": 2.77,
+       "max_drawdown": -17.8,
+       "hold_rata": 3.6,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 135.1
+      }
+     },
+     {
+      "id": 110,
+      "cond": "rsi<30 & p<200",
+      "reg": "br30",
+      "exit": "tp4/sl10/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 66,
+       "winrate": 80.3,
+       "kena_tp": 75.8,
+       "akumulasi_pl": 117.8,
+       "rata_pl": 1.78,
+       "max_drawdown": -33.7,
+       "hold_rata": 2.3,
+       "tp_rata": 4.4,
+       "sl_rata": 10.4,
+       "uji_akumulasi_pl": 7.3
+      }
+     },
+     {
+      "id": 111,
+      "cond": "reversal & gain60_lo",
+      "reg": "all",
+      "exit": "tp5/sl10/5h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +5%, SL -10%, maks 5 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 52,
+       "winrate": 76.9,
+       "kena_tp": 67.3,
+       "akumulasi_pl": 110.3,
+       "rata_pl": 2.12,
+       "max_drawdown": -23.7,
+       "hold_rata": 2.7,
+       "tp_rata": 5.4,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 8.6
+      }
+     },
+     {
+      "id": 109,
+      "cond": "upstreak3 & gain60_lo",
+      "reg": "br30",
+      "exit": "tp0.75atr/sl2.0atr/7h",
+      "rank": "value",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 0,75 x ATR (min 3%), SL = 2,0 x ATR (4-12%, maks 3x TP), maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 144,
+       "winrate": 76.4,
+       "kena_tp": 75.7,
+       "akumulasi_pl": 281.3,
+       "rata_pl": 1.95,
+       "max_drawdown": -68.4,
+       "hold_rata": 3.3,
+       "tp_rata": 5.2,
+       "sl_rata": 10.8,
+       "uji_akumulasi_pl": 98.5
+      }
+     },
+     {
+      "id": 112,
+      "cond": "gapdown_today & nr7",
+      "reg": "weak20",
+      "exit": "tp0.75atr/sl1.5atr/7h",
+      "rank": "rsi_low",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP = 0,75 x ATR (min 3%), SL = 1,5 x ATR (4-12%, maks 3x TP), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": true,
+      "stats": {
+       "trades": 69,
+       "winrate": 76.8,
+       "kena_tp": 75.4,
+       "akumulasi_pl": 369.8,
+       "rata_pl": 5.36,
+       "max_drawdown": -62.3,
+       "hold_rata": 3.1,
+       "tp_rata": 10.3,
+       "sl_rata": 11.9,
+       "uji_akumulasi_pl": 7.4
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 364,
+     "winrate": 79.1,
+     "akumulasi_pl": 1014.4,
+     "rata_pl": 2.79,
+     "max_drawdown": -83.2,
+     "kena_tp": 76.9
+    }
+   }
+  },
+  "20M": {
+   "profit": {
+    "strategies": [
+     {
+      "id": 14,
+      "cond": "squeeze & pos60_lo & gain60_lo",
+      "reg": "ret",
+      "exit": "atr3/1.5",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 3 x ATR, SL = 1,5 x ATR (SL 3-12%), maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 109,
+       "winrate": 61.5,
+       "kena_tp": 26.6,
+       "akumulasi_pl": 496.3,
+       "rata_pl": 4.55,
+       "max_drawdown": -43.7,
+       "hold_rata": 5.7,
+       "tp_rata": 17.2,
+       "sl_rata": 8.5,
+       "uji_akumulasi_pl": 110.7
+      }
+     },
+     {
+      "id": 12,
+      "cond": "up3 & squeeze & pos60_lo",
+      "reg": "ret",
+      "exit": "low5/3atr",
+      "rank": "value",
+      "reg_text": "Aktif bila pasar tidak turun lebih dari 3% dalam 5 hari; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP = 3 x ATR, maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 60,
+       "winrate": 58.3,
+       "kena_tp": 30.0,
+       "akumulasi_pl": 336.8,
+       "rata_pl": 5.61,
+       "max_drawdown": -37.7,
+       "hold_rata": 5.8,
+       "tp_rata": 18.5,
+       "sl_rata": 8.9,
+       "uji_akumulasi_pl": 16.4
+      }
+     },
+     {
+      "id": 10,
+      "cond": "squeeze & pos60_lo & hl_rise",
+      "reg": "all",
+      "exit": "low5/res",
+      "rank": "rsi_low",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 92,
+       "winrate": 55.4,
+       "kena_tp": 26.1,
+       "akumulasi_pl": 293.3,
+       "rata_pl": 3.19,
+       "max_drawdown": -39.2,
+       "hold_rata": 5.2,
+       "tp_rata": 17.0,
+       "sl_rata": 7.5,
+       "uji_akumulasi_pl": 2.4
+      }
+     },
+     {
+      "id": 15,
+      "cond": "up3 & pos60_lo & reversal",
+      "reg": "weak30",
+      "exit": "low5/res",
+      "rank": "volratio",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 30% saham di atas MA20",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": true,
+      "stats": {
+       "trades": 50,
+       "winrate": 54.0,
+       "kena_tp": 22.0,
+       "akumulasi_pl": 287.9,
+       "rata_pl": 5.76,
+       "max_drawdown": -84.1,
+       "hold_rata": 5.2,
+       "tp_rata": 27.6,
+       "sl_rata": 11.4,
+       "uji_akumulasi_pl": 18.6
+      }
+     },
+     {
+      "id": 16,
+      "cond": "lwick & pos60_lo & nr7",
+      "reg": "weak30",
+      "exit": "low5/res",
+      "rank": "rsi_low",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 30% saham di atas MA20",
+      "exit_text": "SL di bawah low 5 hari, TP di resisten terdekat (high 20/60 hari), maks 7 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": true,
+      "stats": {
+       "trades": 60,
+       "winrate": 46.7,
+       "kena_tp": 20.0,
+       "akumulasi_pl": 266.6,
+       "rata_pl": 4.44,
+       "max_drawdown": -64.7,
+       "hold_rata": 4.2,
+       "tp_rata": 29.8,
+       "sl_rata": 9.0,
+       "uji_akumulasi_pl": 0.0
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 248,
+     "winrate": 52.0,
+     "akumulasi_pl": 829.1,
+     "rata_pl": 3.34,
+     "max_drawdown": -112.8,
+     "kena_tp": 22.2
+    }
+   },
+   "winrate": {
+    "strategies": [
+     {
+      "id": 109,
+      "cond": "upstreak3 & gain60_lo",
+      "reg": "br30",
+      "exit": "tp4/sl10/7h",
+      "rank": "lowpos",
+      "reg_text": "Aktif bila minimal 30% saham di atas MA20; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": false,
+      "stats": {
+       "trades": 112,
+       "winrate": 80.4,
+       "kena_tp": 80.4,
+       "akumulasi_pl": 229.1,
+       "rata_pl": 2.05,
+       "max_drawdown": -40.8,
+       "hold_rata": 2.9,
+       "tp_rata": 4.3,
+       "sl_rata": 10.2,
+       "uji_akumulasi_pl": 45.9
+      }
+     },
+     {
+      "id": 113,
+      "cond": "pos60_lo & reversal",
+      "reg": "all",
+      "exit": "tp4/sl10/5h",
+      "rank": "rsi_low",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP +4%, SL -10%, maks 5 hari",
+      "rank_text": "RSI paling rendah",
+      "weak": false,
+      "stats": {
+       "trades": 53,
+       "winrate": 79.2,
+       "kena_tp": 77.4,
+       "akumulasi_pl": 92.9,
+       "rata_pl": 1.75,
+       "max_drawdown": -47.0,
+       "hold_rata": 2.2,
+       "tp_rata": 4.3,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 16.8
+      }
+     },
+     {
+      "id": 114,
+      "cond": "squeeze & gain60_lo",
+      "reg": "all",
+      "exit": "tp0.75atr/sl2.0atr/7h",
+      "rank": "value",
+      "reg_text": "Aktif di semua kondisi pasar; tidak ada entry baru saat persentase saham di atas MA20 turun lebih dari 15 poin dalam 10 hari",
+      "exit_text": "TP = 0,75 x ATR (min 3%), SL = 2,0 x ATR (4-12%, maks 3x TP), maks 7 hari",
+      "rank_text": "Nilai transaksi terbesar",
+      "weak": false,
+      "stats": {
+       "trades": 181,
+       "winrate": 75.7,
+       "kena_tp": 71.8,
+       "akumulasi_pl": 330.1,
+       "rata_pl": 1.82,
+       "max_drawdown": -83.2,
+       "hold_rata": 3.6,
+       "tp_rata": 4.6,
+       "sl_rata": 10.1,
+       "uji_akumulasi_pl": 116.2
+      }
+     },
+     {
+      "id": 115,
+      "cond": "vollo & gapdown_today",
+      "reg": "weak20",
+      "exit": "tp5/sl10/7h",
+      "rank": "volratio",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP +5%, SL -10%, maks 7 hari",
+      "rank_text": "Lonjakan volume tertinggi",
+      "weak": true,
+      "stats": {
+       "trades": 67,
+       "winrate": 71.6,
+       "kena_tp": 70.1,
+       "akumulasi_pl": 59.6,
+       "rata_pl": 0.89,
+       "max_drawdown": -70.9,
+       "hold_rata": 2.1,
+       "tp_rata": 5.4,
+       "sl_rata": 10.3,
+       "uji_akumulasi_pl": 5.4
+      }
+     },
+     {
+      "id": 116,
+      "cond": "pos60_lo & engulf",
+      "reg": "weak20",
+      "exit": "tp4/sl8/7h",
+      "rank": "lowpos",
+      "reg_text": "Khusus pasar lemah: hanya aktif bila kurang dari 20% saham di atas MA20",
+      "exit_text": "TP +4%, SL -8%, maks 7 hari",
+      "rank_text": "Posisi paling dekat dasar 60 hari",
+      "weak": true,
+      "stats": {
+       "trades": 62,
+       "winrate": 71.0,
+       "kena_tp": 71.0,
+       "akumulasi_pl": 77.4,
+       "rata_pl": 1.25,
+       "max_drawdown": -33.2,
+       "hold_rata": 2.5,
+       "tp_rata": 4.3,
+       "sl_rata": 8.3,
+       "uji_akumulasi_pl": 14.3
+      }
+     }
+    ],
+    "top5_stats": {
+     "trades": 354,
+     "winrate": 73.4,
+     "akumulasi_pl": 483.2,
+     "rata_pl": 1.36,
+     "max_drawdown": -90.8,
+     "kena_tp": 72.0
+    }
+   }
+  }
+ }
+}

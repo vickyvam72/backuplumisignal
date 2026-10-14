@@ -59,6 +59,8 @@ android {
             all {
                 it.systemProperty("lumi.screens", System.getProperty("lumi.screens") ?: "0")
                 it.systemProperty("roborazzi.test.record", "true")
+                // Screenshot checks need the debug-only test activity.
+                if (it.name.contains("Release")) it.exclude("**/ScreensTest*")
             }
         }
     }

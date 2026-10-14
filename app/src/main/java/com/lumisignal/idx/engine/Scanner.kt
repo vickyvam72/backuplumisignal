@@ -45,10 +45,15 @@ object Scanner {
         iso
     }
 
-    /** Reads one ticker from Stockbit: 60 completed sessions, broker summary of the day and of 20 days. */
+    /** Reads one ticker from Stockbit: 120 completed sessions, broker summary of the day and of 20 days. */
+    /** Screenshot tests only: replaces the Stockbit download. */
+    @Volatile
+    var testSource: ((String) -> ManualResult)? = null
+
     suspend fun analyzeManual(symbolRaw: String): ManualResult {
         val symbol = symbolRaw.trim().uppercase()
-        val bars = Market.completedOnly(Graph.api.history(symbol, 60, 6))
+        testSource?.let { return it(symbol) }
+        val bars = Market.completedOnly(Graph.api.history(symbol, 120, 12))
         if (bars.size < 6) throw IllegalStateException("Data harga $symbol tidak cukup atau kode saham tidak ditemukan")
         val refDate = bars.last().date
         val day = try {

@@ -14,7 +14,10 @@ import com.lumisignal.idx.engine.RadarRepo
 import com.lumisignal.idx.ui.components.LumiBackground
 import com.lumisignal.idx.ui.screens.HistoryScreen
 import com.lumisignal.idx.ui.screens.HomeScreen
-import com.lumisignal.idx.ui.screens.ManualScreen
+import com.lumisignal.idx.ui.screens.CekSahamScreen
+import com.lumisignal.idx.ui.screens.STAGE_JENIS
+import com.lumisignal.idx.ui.screens.STAGE_RESULT
+import com.lumisignal.idx.ui.screens.STAGE_TIER
 import com.lumisignal.idx.ui.screens.RadarPickScreen
 import com.lumisignal.idx.ui.screens.RadarScreen
 import com.lumisignal.idx.ui.screens.SignalDetailScreen
@@ -53,6 +56,9 @@ class ScreensTest {
         val sid = pick.id
         val p = pick.picks.first()
         val porto = RadarPorto.add(day, tier, "winrate", sid, p, false, null)
+        com.lumisignal.idx.engine.Scanner.testSource = { sym ->
+            com.lumisignal.idx.engine.ManualResult(sym, p.name, day.date, day.barsOf(sym), null, null, null)
+        }
 
         var screen by mutableIntStateOf(0)
         compose.mainClock.autoAdvance = false
@@ -60,17 +66,20 @@ class ScreensTest {
             LumiTheme {
                 LumiBackground {
                     when (screen) {
-                        0 -> HomeScreen(onOpenRadar = {}, onManual = {})
+                        0 -> HomeScreen(onScreening = {})
                         1 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> })
-                        2 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
-                        3 -> HistoryScreen(onOpenSignal = {})
-                        4 -> ManualScreen(p.ticker, onBack = {}, onOpenPick = { _, _, _, _, _ -> })
+                        2 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_TIER)
+                        3 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_JENIS)
+                        4 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_RESULT, initialJenis = "winrate")
+                        5 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
+                        6 -> HistoryScreen(onOpenSignal = {})
+                        7 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)
                         else -> SignalDetailScreen(porto.id, onBack = {})
                     }
                 }
             }
         }
-        val names = listOf("1-home", "2-radar", "3-pick", "4-riwayat", "5-cek-saham", "6-porto")
+        val names = listOf("1-home", "2-scan", "3-tingkat", "4-jenis", "5-hasil", "6-pick", "7-riwayat", "8-cek-saham", "9-porto")
         for (i in names.indices) {
             screen = i
             compose.mainClock.advanceTimeBy(1500)

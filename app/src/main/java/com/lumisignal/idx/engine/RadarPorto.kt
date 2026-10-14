@@ -93,6 +93,40 @@ object RadarPorto {
         return tracked
     }
 
+    /** Portfolio entry from a manual stock check (plan from support/resistance). */
+    fun addManual(symbol: String, name: String, refDate: String, bars: List<com.lumisignal.idx.data.Bar>, plan: TradePlan, why: List<String>, customEntry: Double?): Signal {
+        val today = Market.today()
+        val start = if (customEntry != null) maxOf(refDate, if (Market.sessionInProgress()) previousIso(today) else today) else null
+        val t = bars.last()
+        val prev = bars.getOrNull(bars.size - 2)
+        val k = "M-$refDate-$symbol"
+        val sig = Signal(
+            id = "P-$k-${System.currentTimeMillis()}",
+            source = SOURCE_PORTO,
+            symbol = symbol,
+            name = name,
+            strategyId = 0,
+            refDate = refDate,
+            createdAt = System.currentTimeMillis(),
+            close = t.close,
+            changePct = Market.changePct(t, prev),
+            eval = StrategyEval(strategyId = 0, passed = true, score = 0, checks = why.map { Check(it, "", true) }, highlights = why, plan = plan),
+            bars = bars.takeLast(60),
+            linkedId = k,
+            customEntry = customEntry,
+            startDate = start,
+            status = if (customEntry != null) SignalStatus.ACTIVE else SignalStatus.WAITING,
+            lastPrice = t.close,
+            radar = Levels.MANUAL_TAG.copy(why = why, exitText = "TP di resistance, SL di bawah support, maks 7 hari"),
+        )
+        val tracked = Tracker.track(sig)
+        Graph.history.upsert(listOf(tracked))
+        return tracked
+    }
+
+    fun findManual(refDate: String, symbol: String): Signal? =
+        Graph.history.items.value.firstOrNull { it.source == SOURCE_PORTO && it.linkedId == "M-$refDate-$symbol" }
+
     private fun previousIso(iso: String): String = try {
         java.time.LocalDate.parse(iso).minusDays(1).toString()
     } catch (e: Exception) {

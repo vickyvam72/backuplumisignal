@@ -116,8 +116,8 @@ fun SettingsScreen() {
         SectionHeader("Cara kerja Lumi")
         Spacer(Modifier.height(8.dp))
         GlassCard(Modifier.fillMaxWidth()) {
-            Bullet("Radar Besok dihitung otomatis setiap hari bursa ±17:50 WIB dari closing semua saham IDX, dengan mesin yang sama persis dengan backtest 1 tahun. Sekali buka, semua strategi di semua tingkat likuiditas langsung tampil.")
-            Bullet("Dua jenis sinyal: Profit besar (target lebar dari ATR atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Tiap tingkat likuiditas punya 5 strateginya sendiri, plus Top 5 gabungan.")
+            Bullet("Radar Besok dihitung otomatis setiap hari bursa ±17:50 WIB dari closing semua saham IDX. Sekali screening, pilih tingkat likuiditas dan jenis sinyal, semua strateginya langsung tampil.")
+            Bullet("Dua jenis sinyal: Profit tinggi (target lebar dari volatilitas atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Tiap tingkat likuiditas punya 5 strateginya sendiri, plus Top 5 gabungan.")
             Bullet("Beli di sesi berikutnya: di harga pembukaan bila ≤ closing +1%, kalau dibuka lebih tinggi antre di closing +1%. Tidak terisi di sesi itu = batal. Saham yang masih dipegang tidak direkomendasikan lagi.")
             Bullet("TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah) dan dihitung dari harga beli sebenarnya. Kalau belum kena TP/SL, posisi dijual di closing hari terakhir masa hold.")
             Bullet("Riwayat Strategi berisi hasil nyata setiap rekomendasi radar; winrate = transaksi untung dibagi transaksi selesai, akumulasi P/L = jumlah P/L real. Porto dipantau dengan harga Stockbit milikmu.")

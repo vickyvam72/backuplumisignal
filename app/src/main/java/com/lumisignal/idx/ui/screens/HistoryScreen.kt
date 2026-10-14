@@ -134,7 +134,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
-        item { Segmented(listOf("Profit besar", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0 }) }
+        item { Segmented(listOf("Profit tinggi", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0 }) }
         item {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip("Top 5 gabungan", sel == 0, Lumi.Sky, null) { sel = 0 }
@@ -222,14 +222,11 @@ private fun LedgerStatsCard(title: String, st: LedgerStats, d: RadarDay?, tier: 
             StatTile("Berjalan", "${st.open + st.waiting}", Modifier.weight(1f), Lumi.Sky)
             StatTile("Akumulasi P/L", if (st.closed > 0) Fmt.pct(st.total) else "–", Modifier.weight(1.2f), if (st.total >= 0) Lumi.Green else Lumi.Red)
         }
-        val bt = if (sel == 0) d?.specs?.get(tier)?.get(jenis)?.top5Stats else d?.spec(tier, jenis, sel)?.stats
-        if (bt != null && bt.trades > 0) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Pembanding backtest: winrate ${Fmt.num(bt.winrate)}%, rata-rata ${Fmt.pct(bt.rataPl, decimals = 2)} per transaksi. Akumulasi P/L = jumlah P/L real semua transaksi yang selesai.",
-                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
-            )
-        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Akumulasi P/L = jumlah P/L real semua transaksi yang selesai (beli sesuai aturan radar, jual di TP, SL, atau akhir masa hold).",
+            style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
+        )
     }
 }
 

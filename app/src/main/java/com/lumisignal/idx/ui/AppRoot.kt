@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -53,7 +54,7 @@ import com.lumisignal.idx.ui.components.LumiBackground
 import com.lumisignal.idx.ui.screens.HistoryScreen
 import com.lumisignal.idx.ui.screens.HomeScreen
 import com.lumisignal.idx.ui.screens.LoginFlow
-import com.lumisignal.idx.ui.screens.ManualScreen
+import com.lumisignal.idx.ui.screens.CekSahamScreen
 import com.lumisignal.idx.ui.screens.PermissionScreen
 import com.lumisignal.idx.ui.screens.RadarPickScreen
 import com.lumisignal.idx.ui.screens.RadarScreen
@@ -125,13 +126,7 @@ private fun MainNav() {
         composable("detail/{id}") { entry ->
             SignalDetailScreen(entry.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() })
         }
-        composable("manual/{symbol}") { entry ->
-            ManualScreen(
-                entry.arguments?.getString("symbol") ?: "",
-                onBack = { nav.popBackStack() },
-                onOpenPick = openPick,
-            )
-        }
+
     }
 }
 
@@ -141,8 +136,12 @@ private fun TabsScreen(nav: NavHostController) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> HomeScreen(onOpenRadar = { nav.navigate("radar") { launchSingleTop = true } }, onManual = { nav.navigate("manual/$it") })
+                0 -> HomeScreen(onScreening = { nav.navigate("radar") { launchSingleTop = true } })
                 1 -> HistoryScreen(onOpenSignal = { nav.navigate("detail/$it") })
+                2 -> CekSahamScreen(
+                    onOpenPick = { tier, jenis, sid, ticker, g -> nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}") },
+                    onOpenSignal = { nav.navigate("detail/$it") },
+                )
                 else -> SettingsScreen()
             }
         }
@@ -165,7 +164,8 @@ private fun BottomBar(selected: Int, onSelect: (Int) -> Unit) {
     ) {
         NavItem(Icons.Filled.Home, "Beranda", selected == 0, Modifier.weight(1f)) { onSelect(0) }
         NavItem(Icons.AutoMirrored.Filled.List, "Riwayat", selected == 1, Modifier.weight(1f)) { onSelect(1) }
-        NavItem(Icons.Filled.AccountCircle, "Akun", selected == 2, Modifier.weight(1f)) { onSelect(2) }
+        NavItem(Icons.Filled.Search, "Cek Saham", selected == 2, Modifier.weight(1f)) { onSelect(2) }
+        NavItem(Icons.Filled.AccountCircle, "Akun", selected == 3, Modifier.weight(1f)) { onSelect(3) }
     }
 }
 

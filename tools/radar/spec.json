@@ -34,13 +34,13 @@
  "jenis": [
   {
    "key": "profit",
-   "label": "Profit besar",
-   "desc": "Target lebar dari ATR atau resisten, winrate sekitar 40–50% tapi untungnya besar."
+   "label": "Profit tinggi",
+   "desc": "Target lebar dari volatilitas atau resisten terdekat. Mengejar kenaikan besar, sesekali kena stop loss."
   },
   {
    "key": "winrate",
    "label": "Winrate tinggi",
-   "desc": "TP kecil minimal 3% yang sering tersentuh, winrate sekitar 75–80%."
+   "desc": "Target kecil minimal 3% yang lebih sering tercapai. Untung tipis tapi konsisten."
   }
  ],
  "strategies": {

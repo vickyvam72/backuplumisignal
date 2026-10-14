@@ -174,6 +174,7 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
     val tag = sig.radar ?: return
     val accent = com.lumisignal.idx.ui.components.hexColor(tag.color)
     val plan = sig.eval.plan
+    val sr = remember(chartBars.size, sig.refDate) { com.lumisignal.idx.engine.Levels.of(chartBars.filter { it.date <= sig.refDate }) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(sig.symbol, subtitle = sig.name.ifBlank { tag.name }, onBack = onBack)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
@@ -183,7 +184,11 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "PORTO · " + (if (tag.jenis == "profit") "PROFIT BESAR" else "WINRATE TINGGI") + if (tag.combined) " · TOP 5 GABUNGAN" else "",
+                            "PORTO · " + when (tag.jenis) {
+                                "profit" -> "PROFIT TINGGI"
+                                "winrate" -> "WINRATE TINGGI"
+                                else -> "ANALISA MANUAL"
+                            } + if (tag.combined) " · TOP 5 GABUNGAN" else "",
                             style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
                         )
                         Text(tag.name, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
@@ -215,12 +220,18 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                 GlassCard(Modifier.fillMaxWidth(), padding = 12.dp) {
                     SectionHeader("Chart & level trading", subtitle = "Candle harian · MA5 (biru muda) · MA20 (kuning)")
                     Spacer(Modifier.height(10.dp))
-                    CandleChart(bars = chartBars, plan = plan, signalDate = sig.refDate)
+                    CandleChart(bars = chartBars, plan = plan, signalDate = sig.refDate, height = 320.dp, levels = com.lumisignal.idx.ui.components.srChartLevels(sr))
+                }
+                Spacer(Modifier.height(12.dp))
+                GlassCard(Modifier.fillMaxWidth(), accent = com.lumisignal.idx.ui.components.SupportColor) {
+                    SectionHeader("Support & resistance", subtitle = "Dihitung dari chart sampai hari sinyal")
+                    Spacer(Modifier.height(8.dp))
+                    com.lumisignal.idx.ui.components.LevelsPanel(sr, sig.close)
                 }
                 Spacer(Modifier.height(12.dp))
             }
             GlassCard(Modifier.fillMaxWidth(), accent = accent) {
-                SectionHeader("Kenapa masuk radar")
+                SectionHeader(if (tag.jenis == "manual") "Catatan analisa" else "Kenapa masuk radar")
                 Spacer(Modifier.height(8.dp))
                 ChecksPanel(sig.eval.checks, "teknikal")
                 if (tag.exitText.isNotBlank()) {

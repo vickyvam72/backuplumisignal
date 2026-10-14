@@ -1,6 +1,11 @@
 package com.lumisignal.idx.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Brush
+import com.lumisignal.idx.ui.components.ProgressBar
+import com.lumisignal.idx.ui.components.RadarScope
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -70,86 +75,253 @@ import kotlinx.coroutines.launch
 /** Opens one pick: tier, jenis, strategy id, ticker, combined flag. */
 typealias OpenPick = (String, String, Int, String, Boolean) -> Unit
 
-/** All Radar Besok results of one liquidity tier at once: both signal types, combined top 5 and every strategy. */
+/** Stages of a screening: scanning animation, liquidity tier, signal type, results. */
+const val STAGE_SCAN = 0
+const val STAGE_TIER = 1
+const val STAGE_JENIS = 2
+const val STAGE_RESULT = 3
+
+private val TIER_HINT = mapOf(
+    "semua" to "Semua saham aktif, termasuk yang sepi transaksi",
+    "250jt" to "Transaksi ≥ Rp250 juta per hari",
+    "1M" to "Transaksi ≥ Rp1 miliar per hari, cukup likuid",
+    "5M" to "Transaksi ≥ Rp5 miliar per hari, likuid",
+    "20M" to "Transaksi ≥ Rp20 miliar per hari, sangat likuid",
+)
+
+/**
+ * Screening flow: a radar sweep while the latest results load, then the user picks a liquidity tier and
+ * a signal type, then every strategy of that combination is shown at once.
+ */
 @Composable
-fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick) {
+fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = STAGE_SCAN, initialJenis: String = "") {
     val day by RadarRepo.day.collectAsStateWithLifecycle()
     val state by RadarRepo.state.collectAsStateWithLifecycle()
     val tier by RadarRepo.tier.collectAsStateWithLifecycle()
-    var filter by rememberSaveable { mutableIntStateOf(0) }
+    var stage by rememberSaveable { mutableIntStateOf(initialStage) }
+    var jenis by rememberSaveable { mutableStateOf(initialJenis.ifBlank { "profit" }) }
+    var scanDone by rememberSaveable { mutableStateOf(initialStage != STAGE_SCAN) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
-        if (day == null || RadarRepo.isStale()) runCatching { RadarRepo.refresh() }
+        if (scanDone) return@LaunchedEffect
+        val started = System.currentTimeMillis()
+        runCatching { RadarRepo.refresh() }
+        val left = 3200L - (System.currentTimeMillis() - started)
+        if (left > 0) kotlinx.coroutines.delay(left)
+        scanDone = true
+        if (RadarRepo.day.value != null) stage = STAGE_TIER
     }
+    val back: () -> Unit = {
+        when (stage) {
+            STAGE_RESULT -> stage = STAGE_JENIS
+            STAGE_JENIS -> stage = STAGE_TIER
+            else -> onBack()
+        }
+    }
+    BackHandler(enabled = stage == STAGE_RESULT || stage == STAGE_JENIS) { back() }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(
-            title = "Radar Besok",
-            subtitle = day?.let { "Closing ${Market.prettyDate(it.date, false)} · beli ${Market.prettyDate(RadarPorto.nextSession(it.date))}" }
-                ?: "Hasil screening semua strategi",
-            onBack = onBack,
-            trailing = {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(Lumi.SurfaceHi)
-                        .clickable(enabled = !state.loading) { scope.launch { runCatching { RadarRepo.refresh() } } },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (state.loading) CircularProgressIndicator(color = Lumi.Sky, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    else Icon(Icons.Filled.Refresh, "Muat ulang", tint = Lumi.Text)
-                }
-            },
-        )
         val d = day
+        ScreenHeader(
+            title = when (stage) {
+                STAGE_TIER -> "Pilih tingkat likuiditas"
+                STAGE_JENIS -> "Pilih jenis sinyal"
+                STAGE_RESULT -> d?.jenisLabel(jenis) ?: "Hasil screening"
+                else -> "Screening"
+            },
+            subtitle = d?.let { "Closing ${Market.prettyDate(it.date, false)} · beli ${Market.prettyDate(RadarPorto.nextSession(it.date))}" }
+                ?: "Radar Besok",
+            onBack = back,
+        )
         when {
-            d == null && state.loading -> LoadingBlock("Mengambil hasil Radar Besok…")
+            stage == STAGE_SCAN && !scanDone -> ScanView()
             d == null -> Column(Modifier.padding(18.dp)) {
                 GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Red) {
                     Text("Radar belum bisa dimuat", style = MaterialTheme.typography.titleMedium, color = Lumi.Red)
                     Spacer(Modifier.height(6.dp))
                     Text(state.error ?: "Coba lagi sebentar.", style = MaterialTheme.typography.bodyMedium, color = Lumi.TextDim)
                     Spacer(Modifier.height(14.dp))
-                    GradientButton("Coba lagi", { scope.launch { runCatching { RadarRepo.refresh() } } }, Modifier.fillMaxWidth())
+                    GradientButton("Coba lagi", {
+                        scope.launch { runCatching { RadarRepo.refresh() }; if (RadarRepo.day.value != null) stage = STAGE_TIER }
+                    }, Modifier.fillMaxWidth())
                 }
             }
-            else -> LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item { MarketCard(d, state.error) }
-                item {
-                    TierChips(d, tier) { RadarRepo.setTier(it) }
-                    Spacer(Modifier.height(10.dp))
-                    Segmented(listOf("Semua", "Profit besar", "Winrate tinggi"), filter, { filter = it })
-                }
-                val jenisList = when (filter) {
-                    1 -> listOf("profit")
-                    2 -> listOf("winrate")
-                    else -> listOf("profit", "winrate")
-                }
-                for (jenis in jenisList) {
-                    val board = d.board(tier, jenis)
-                    val specs = d.specs[tier]?.get(jenis)
-                    item(key = "h-$jenis") { JenisHeader(d, tier, jenis, board) }
-                    if (board == null || specs == null) {
-                        item(key = "e-$jenis") { EmptyState("Belum ada data", "Radar untuk tingkat ini belum tersedia.") }
-                        continue
+            stage == STAGE_TIER || stage == STAGE_SCAN -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
+            stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; stage = STAGE_RESULT }
+            else -> ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
+        }
+    }
+}
+
+private val SCAN_STEPS = listOf(
+    "Memindai closing semua saham IDX…",
+    "Membaca kondisi pasar…",
+    "Mencocokkan pola tiap strategi…",
+    "Menyusun batas beli, TP & SL…",
+)
+
+@Composable
+private fun ScanView() {
+    var step by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(800)
+            step = (step + 1) % SCAN_STEPS.size
+        }
+    }
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        RadarScope(280.dp, periodMs = 1600, blips = 18)
+        Spacer(Modifier.height(30.dp))
+        Text("Screening berjalan", style = MaterialTheme.typography.titleLarge, color = Lumi.Text)
+        Spacer(Modifier.height(6.dp))
+        Text(SCAN_STEPS[step], style = MaterialTheme.typography.bodyMedium, color = Lumi.Sky)
+        Spacer(Modifier.height(18.dp))
+        ProgressBar(((step + 1) / SCAN_STEPS.size.toFloat()))
+    }
+}
+
+private fun signalCount(d: RadarDay, tier: String, jenis: String? = null): Int =
+    d.boards[tier].orEmpty().filterKeys { jenis == null || it == jenis }.values.sumOf { b ->
+        b.strategies.flatMap { s -> s.picks.filter { it.valid }.map { it.ticker } }.toSet().size
+    }
+
+@Composable
+private fun TierStep(d: RadarDay, selected: String, onPick: (String) -> Unit) {
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item { MarketCard(d, null) }
+        item {
+            Text(
+                "Pilih sesuai seberapa ramai saham yang ingin kamu perdagangkan. Makin tinggi tingkatnya, makin mudah beli-jual dalam jumlah besar.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+            )
+        }
+        RadarRepo.TIER_KEYS.forEach { key ->
+            item(key = key) {
+                val t = d.tiers.firstOrNull { it.key == key }
+                val n = signalCount(d, key)
+                val sel = key == selected
+                GlassCard(Modifier.fillMaxWidth(), accent = if (sel) Lumi.Sky else null, padding = 14.dp, onClick = { onPick(key) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(42.dp).clip(RoundedCornerShape(13.dp))
+                                .background(Brush.linearGradient(listOf(Lumi.Sky.copy(alpha = 0.9f), Lumi.DeepBlue))),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("${RadarRepo.TIER_KEYS.indexOf(key) + 1}", style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Color.White)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t?.label ?: key, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
+                            Text(TIER_HINT[key] ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                            if (t != null) Text("${t.stocks} saham dipindai", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("$n", style = NumberStyle.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold), color = if (n > 0) Lumi.Green else Lumi.TextMuted)
+                            Text("sinyal", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+                        }
                     }
-                    item(key = "t-$jenis") { Top5Card(d, tier, jenis, board, onOpenPick) }
-                    for (bs in board.strategies) {
-                        val spec = specs.strategies.firstOrNull { it.id == bs.id } ?: continue
-                        item(key = "s-$jenis-${bs.id}") { StrategyCard(d, tier, jenis, spec, bs, onOpenPick) }
-                    }
-                }
-                item {
-                    Text(
-                        "Radar dihitung otomatis setiap hari bursa ±17:50 WIB dari closing semua saham, dengan mesin yang sama persis dengan backtest " +
-                            "(${d.calibrated}). Statistik pada kartu adalah hasil backtest; hasil nyata sejak ${Market.prettyDate(d.goLive, false)} ada di tab Riwayat.",
-                        style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
-                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun JenisStep(d: RadarDay, tier: String, selected: String, onPick: (String) -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
+        Pill(d.tierLabel(tier), Lumi.Sky)
+        Spacer(Modifier.height(12.dp))
+        listOf("profit", "winrate").forEach { j ->
+            val info = d.jenis.firstOrNull { it.key == j }
+            val color = if (j == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
+            val n = signalCount(d, tier, j)
+            GlassCard(Modifier.fillMaxWidth(), accent = color, onClick = { onPick(j) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadarBadge(if (j == "profit") "rocket" else "target", if (j == "profit") "#FF9F43" else "#22D3EE", j, 58.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(info?.label ?: j, style = MaterialTheme.typography.titleLarge, color = Lumi.Text)
+                        Spacer(Modifier.height(2.dp))
+                        Text(info?.desc ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Pill("$n saham hari ini", if (n > 0) Lumi.Green else Lumi.TextMuted)
+                    Pill(if (j == "profit") "TP lebar" else "TP min. 3%", color)
+                    if (j == selected) Pill("Terakhir dipilih", Lumi.Sky)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun ResultList(
+    d: RadarDay, tier: String, jenis: String, error: String?, onOpenPick: OpenPick,
+    onChangeTier: () -> Unit, onChangeJenis: () -> Unit,
+) {
+    val board = d.board(tier, jenis)
+    val specs = d.specs[tier]?.get(jenis)
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChangeChip(d.tierLabel(tier), Lumi.Sky, onChangeTier)
+                ChangeChip(d.jenisLabel(jenis), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE), onChangeJenis)
+            }
+        }
+        item { MarketCard(d, error) }
+        if (board == null || specs == null) {
+            item { EmptyState("Belum ada data", "Radar untuk pilihan ini belum tersedia.") }
+        } else {
+            item { Top5Card(d, tier, jenis, board, onOpenPick) }
+            item { SectionHeaderLine("Per strategi", "Masing-masing maksimal 5 saham terbaik") }
+            for (bs in board.strategies) {
+                val spec = specs.strategies.firstOrNull { it.id == bs.id } ?: continue
+                item(key = "s-${bs.id}") { StrategyCard(d, tier, jenis, spec, bs, onOpenPick) }
+            }
+        }
+        item {
+            Text(
+                "Radar diperbarui otomatis setiap hari bursa ±17:50 WIB dari closing semua saham. Hasil nyata setiap sinyal tercatat di tab Riwayat.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChangeChip(text: String, color: Color, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.14f))
+            .border(1.dp, color.copy(alpha = 0.45f), RoundedCornerShape(50)).clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium, color = color)
+        Spacer(Modifier.width(4.dp))
+        Text("ganti", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+    }
+}
+
+@Composable
+private fun SectionHeaderLine(title: String, sub: String) {
+    Column(Modifier.padding(top = 4.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
+        Text(sub, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
     }
 }
 
@@ -216,33 +388,6 @@ fun TierChips(d: RadarDay?, selected: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun JenisHeader(d: RadarDay, tier: String, jenis: String, board: Board?) {
-    val j = d.jenis.firstOrNull { it.key == jenis }
-    val stats = d.specs[tier]?.get(jenis)?.top5Stats
-    val count = board?.strategies?.sumOf { s -> s.picks.count { it.valid } } ?: 0
-    val color = if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
-    Column(Modifier.padding(top = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Sparkle(12.dp, color)
-            Spacer(Modifier.width(8.dp))
-            Text(j?.label ?: jenis, style = MaterialTheme.typography.headlineSmall, color = Lumi.Text, modifier = Modifier.weight(1f))
-            Pill("$count sinyal", color)
-        }
-        if (j != null) {
-            Spacer(Modifier.height(2.dp))
-            Text(j.desc, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
-        }
-        if (stats != null && stats.trades > 0) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Backtest top 5 gabungan: winrate ${Fmt.num(stats.winrate)}% · akumulasi P/L ${Fmt.pct(stats.akumulasiPl)} · ${stats.trades} transaksi",
-                style = MaterialTheme.typography.labelMedium, color = color,
-            )
-        }
-    }
-}
-
-@Composable
 private fun Top5Card(d: RadarDay, tier: String, jenis: String, board: Board, onOpenPick: OpenPick) {
     val picks = board.top5.filter { it.valid }
     GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Sky) {
@@ -255,7 +400,7 @@ private fun Top5Card(d: RadarDay, tier: String, jenis: String, board: Board, onO
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("Top 5 gabungan", style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                Text("5 saham terbaik dari kelima strategi, strategi dengan rata-rata P/L terbaik didahulukan", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Text("5 saham pilihan terbaik dari kelima strategi di bawah", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -285,9 +430,8 @@ private fun StrategyCard(d: RadarDay, tier: String, jenis: String, spec: Strateg
                 Text(meta?.name ?: "Strategi ${spec.id}", style = MaterialTheme.typography.titleSmall, color = Lumi.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Pill("WR ${Fmt.num(spec.stats.winrate, 0)}%", Lumi.Green)
-                    Pill("P/L ${Fmt.pct(spec.stats.akumulasiPl, decimals = 0)}", accent)
-                    if (spec.weak) Pill("Pasar lemah", Lumi.Amber)
+                    Pill(if (bs.active) "${picks.size} saham" else "Tidak aktif", if (!bs.active) Lumi.Amber else if (picks.isNotEmpty()) Lumi.Green else Lumi.TextMuted)
+                    if (spec.weak) Pill("Khusus pasar lemah", Lumi.Amber)
                 }
             }
             Icon(if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = Lumi.TextMuted)
@@ -298,11 +442,6 @@ private fun StrategyCard(d: RadarDay, tier: String, jenis: String, spec: Strateg
             RuleLine("Pasar", spec.regText)
             RuleLine("Urutan", spec.rankText)
             RuleLine("Keluar", spec.exitText)
-            RuleLine(
-                "Backtest",
-                "${spec.stats.trades} transaksi · winrate ${Fmt.num(spec.stats.winrate)}% · kena TP ${Fmt.num(spec.stats.kenaTp)}% · rata-rata ${Fmt.pct(spec.stats.rataPl, decimals = 2)} · " +
-                    "max drawdown ${Fmt.pct(spec.stats.maxDrawdown)} · hold ${Fmt.num(spec.stats.holdRata)} hari",
-            )
         }
         Spacer(Modifier.height(10.dp))
         when {

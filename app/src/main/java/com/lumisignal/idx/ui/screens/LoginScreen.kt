@@ -106,7 +106,7 @@ private fun WelcomeScreen(reason: String?, onConnect: () -> Unit) {
                 }
                 Spacer(Modifier.height(14.dp))
             }
-            Feature(Icons.Filled.Search, "Radar Besok", "Semua strategi hasil backtest langsung tampil sekali buka — tiap sinyal lengkap dengan batas beli, TP & SL.")
+            Feature(Icons.Filled.Search, "Radar Besok", "Sekali screening, semua strategi langsung tampil — tiap sinyal lengkap dengan batas beli, TP & SL.")
             Feature(Icons.Filled.Star, "Bukti yang transparan", "Lihat broker mana yang akumulasi dan chart teknikal di balik setiap sinyal.")
             Feature(Icons.Filled.Notifications, "Pemantauan otomatis", "Notifikasi saat harga menyentuh entry, take profit, atau stop loss.")
             Spacer(Modifier.height(26.dp))

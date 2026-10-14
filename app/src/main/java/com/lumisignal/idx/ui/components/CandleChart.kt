@@ -32,6 +32,9 @@ import com.lumisignal.idx.ui.theme.Lumi
 import kotlin.math.max
 import kotlin.math.min
 
+/** Extra horizontal level on the chart (support / resistance). */
+data class ChartLevel(val price: Double, val color: Color, val label: String)
+
 private val MA5 = Color(0xFF9EDCFF)
 private val MA20 = Color(0xFFFFC14D)
 
@@ -48,6 +51,7 @@ fun CandleChart(
     signalDate: String? = null,
     maxBars: Int = 45,
     height: Dp = 280.dp,
+    levels: List<ChartLevel> = emptyList(),
 ) {
     val measurer = rememberTextMeasurer()
     val closes = remember(bars) { bars.map { it.close } }
@@ -71,6 +75,7 @@ fun CandleChart(
             lo = min(lo, plan.stopLoss)
             hi = max(hi, plan.tp)
         }
+        levels.forEach { lo = min(lo, it.price); hi = max(hi, it.price) }
         val pad = (hi - lo) * 0.06 + 0.0001
         lo -= pad
         hi += pad
@@ -137,13 +142,16 @@ fun CandleChart(
         drawSeries(ma20.subList(startIdx, bars.size), step, ::py, MA20)
 
         // plan lines
-        if (plan != null) {
-            val lines = listOf(
+        if (plan != null || levels.isNotEmpty()) {
+            val planLines = if (plan == null) emptyList() else listOf(
                 Triple(py(plan.tp), Lumi.Green, "TP ${Fmt.price(plan.tp)}"),
                 Triple(py(plan.entryHigh), Lumi.Blue, "BUY ${Fmt.price(plan.entryHigh)}"),
                 Triple(py(plan.stopLoss), Lumi.Red, "SL ${Fmt.price(plan.stopLoss)}"),
             )
-            lines.forEach { (y, c, _) -> planLine(y, chartW, c) }
+            val extra = levels.map { Triple(py(it.price), it.color, "${it.label} ${Fmt.price(it.price)}") }
+            extra.forEach { (y, c, _) -> levelLine(y, chartW, c) }
+            planLines.forEach { (y, c, _) -> planLine(y, chartW, c) }
+            val lines = (planLines + extra).sortedBy { it.first }
             // Labels never overlap: push them apart when the levels are close together.
             val gap = 17.dp.toPx()
             val ys = lines.map { it.first }.toMutableList()
@@ -171,6 +179,13 @@ private fun DrawScope.label(measurer: TextMeasurer, text: String, at: Offset, co
             fontFamily = GroteskFamily, fontSize = 9.5.sp, color = color,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
         ),
+    )
+}
+
+private fun DrawScope.levelLine(y: Float, chartW: Float, color: Color) {
+    drawLine(
+        color.copy(alpha = 0.75f), Offset(0f, y), Offset(chartW, y), strokeWidth = 1.2f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 6f)),
     )
 }
 

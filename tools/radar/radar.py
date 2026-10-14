@@ -460,8 +460,10 @@ def main():
 
     wib = datetime.now(timezone(timedelta(hours=7)))
     latest = dict(version=1, date=today, generated_at=wib.strftime('%Y-%m-%dT%H:%M:%S+07:00'), go_live=go_live,
-                  calibrated=spec['calibrated'], market=market, tiers=tiers, jenis=spec['jenis'],
-                  strategies=spec['strategies'], specs={t: {j: spec['boards'][t][j] for j in spec['boards'][t]} for t in spec['boards']},
+                  market=market, tiers=tiers, jenis=spec['jenis'], strategies=spec['strategies'],
+                  # rules only: no research statistics are published with the radar
+                  specs={t: {j: dict(strategies=[{k: v for k, v in x.items() if k != 'stats'} for x in spec['boards'][t][j]['strategies']])
+                             for j in spec['boards'][t]} for t in spec['boards']},
                   boards=boards, bars=bars)
     json.dump(latest, open(os.path.join(args.out, 'latest.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 

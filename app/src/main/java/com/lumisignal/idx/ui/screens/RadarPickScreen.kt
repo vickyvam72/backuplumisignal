@@ -44,9 +44,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lumisignal.idx.Graph
 import com.lumisignal.idx.data.Bar
-import com.lumisignal.idx.data.BacktestStats
 import com.lumisignal.idx.data.RadarPick
 import com.lumisignal.idx.engine.Fmt
+import com.lumisignal.idx.engine.Levels
+import com.lumisignal.idx.ui.components.LevelsPanel
+import com.lumisignal.idx.ui.components.SupportColor
+import com.lumisignal.idx.ui.components.srChartLevels
 import com.lumisignal.idx.engine.Market
 import com.lumisignal.idx.engine.RadarPorto
 import com.lumisignal.idx.engine.RadarRepo
@@ -64,7 +67,7 @@ import com.lumisignal.idx.ui.components.hexColor
 import com.lumisignal.idx.ui.theme.Lumi
 import com.lumisignal.idx.ui.theme.NumberStyle
 
-/** Detail of one radar pick: plan, chart, why it was picked and the strategy's rules and backtest. */
+/** Detail of one radar pick: plan, chart, support/resistance, why it was picked and the strategy's rules. */
 @Composable
 fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combined: Boolean, onBack: () -> Unit, onOpenSignal: (String) -> Unit) {
     val day by RadarRepo.day.collectAsStateWithLifecycle()
@@ -86,6 +89,7 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
     val accent = hexColor(meta?.color ?: "#3D8BFF")
     val plan = remember(d.date, tier, jenis, sid, ticker) { RadarPorto.plan(d, tier, jenis, sid, pick) }
     val bars: List<Bar> = remember(d.date, ticker) { d.barsOf(ticker) }
+    val sr = remember(d.date, ticker) { Levels.of(bars) }
     val porto = remember(items, d.date) { RadarPorto.find(d.date, tier, jenis, sid, ticker, combined) }
 
     Column(Modifier.fillMaxSize()) {
@@ -140,9 +144,15 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
 
             if (bars.isNotEmpty()) {
                 GlassCard(Modifier.fillMaxWidth(), padding = 12.dp) {
-                    SectionHeader("Chart & level trading", subtitle = "Candle harian · MA5 (biru muda) · MA20 (kuning)")
+                    SectionHeader("Chart & level trading", subtitle = "Beli, TP, SL, support (ungu) & resistance (oranye)")
                     Spacer(Modifier.height(10.dp))
-                    CandleChart(bars = bars, plan = plan, signalDate = d.date)
+                    CandleChart(bars = bars, plan = plan, signalDate = d.date, height = 320.dp, levels = srChartLevels(sr))
+                }
+                Spacer(Modifier.height(12.dp))
+                GlassCard(Modifier.fillMaxWidth(), accent = SupportColor) {
+                    SectionHeader("Support & resistance", subtitle = "Area harga tempat saham biasanya memantul")
+                    Spacer(Modifier.height(8.dp))
+                    LevelsPanel(sr, pick.close)
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -158,18 +168,16 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
             }
             Spacer(Modifier.height(12.dp))
 
-            spec?.let { sp ->
-                GlassCard(Modifier.fillMaxWidth()) {
-                    SectionHeader("Rapor backtest strategi", subtitle = "${d.calibrated} · tingkat ${d.tierLabel(tier)}")
-                    Spacer(Modifier.height(10.dp))
-                    StatsGrid(sp.stats)
-                    Spacer(Modifier.height(10.dp))
-                    Text(meta?.desc ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+            GlassCard(Modifier.fillMaxWidth()) {
+                SectionHeader("Aturan strategi", subtitle = meta?.name ?: "")
+                Spacer(Modifier.height(8.dp))
+                Text("Syarat: ${meta?.desc ?: ""}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                spec?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text("Keluar: ${sp.exitText}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+                    Text("Keluar: ${it.exitText}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 }
-                Spacer(Modifier.height(12.dp))
             }
+            Spacer(Modifier.height(12.dp))
 
             if (porto == null) {
                 GradientButton("Masukkan Porto", { dialog = true }, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
@@ -203,20 +211,6 @@ private fun WhyRow(text: String) {
         }
         Spacer(Modifier.width(10.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium, color = Lumi.Text, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-fun StatsGrid(s: BacktestStats) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatTile("Winrate", "${Fmt.num(s.winrate)}%", Modifier.weight(1f), Lumi.Green)
-        StatTile("Akumulasi P/L", Fmt.pct(s.akumulasiPl), Modifier.weight(1f), if (s.akumulasiPl >= 0) Lumi.Green else Lumi.Red)
-    }
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        StatTile("Transaksi", "${s.trades}", Modifier.weight(1f))
-        StatTile("Rata-rata", Fmt.pct(s.rataPl, decimals = 2), Modifier.weight(1f))
-        StatTile("Max DD", Fmt.pct(s.maxDrawdown), Modifier.weight(1f), Lumi.Red)
     }
 }
 

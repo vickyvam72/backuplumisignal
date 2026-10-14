@@ -333,7 +333,7 @@ def main():
     last = len(c.dates) - 1
     today = c.dates[last]
     frozen_all = load_frozen(args.picks, go_live) if args.picks else {}
-    frozen_all.pop(today, None)          # today's picks are always recomputed
+    # A second run on the same closing (fallback schedule) keeps the picks that were already published.
     os.makedirs(args.out, exist_ok=True)
 
     df = c.df

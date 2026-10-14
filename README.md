@@ -1,22 +1,16 @@
 # Lumi Signal IDX
 
-Aplikasi Android untuk screening sinyal beli saham Indonesia (IDX), memakai data dari akun Stockbit milik pengguna sendiri.
+Aplikasi Android untuk screening sinyal beli saham Indonesia (IDX). Radar dihitung dari data harga publik; pemantauan Porto dan broker summary memakai akun Stockbit milik pengguna sendiri (read-only).
 
 ## Fitur
 
-- **Login Stockbit lewat WebView.** Token sesi dibaca dari cookie `credentialStorage` milik stockbit.com. Akses read-only, tidak pernah membuat order.
-- **5 strategi "Radar Besok"** berbasis harga closing sesi terakhir yang sudah selesai:
-  1. Closing Kuat + Bandar Masuk
-  2. Breakout dari Tidur
-  3. ARA, Bandar Belum Keluar
-  4. Pantulan di Modal Bandar
-  5. Gorengan Bangun
-- **Screening dua tahap.** Tahap 1 mengambil candle harian semua saham (di-cache per tanggal closing). Tahap 2 menganalisa broker summary maksimal 40 kandidat. Hasilnya top 5 saham.
-- **Rencana trading** berisi area beli, syarat batal, stop loss struktural (bukan rasio R:R tetap), serta TP1/TP2 dari resistance atau ATR.
-- **Halaman analisa** menampilkan bukti bandar (broker summary hari sinyal dan akumulasi 20 hari), bukti teknikal, dan chart candle dengan MA5/MA20 beserta level trading.
-- **Analisa manual** satu saham terhadap kelima strategi sekaligus.
-- **Riwayat Strategi & Riwayat Portofolio**, masing-masing dengan winrate dan rata-rata P/L.
-- **Pemantauan latar belakang** (WorkManager, tiap ±15 menit) dengan notifikasi saat harga menyentuh entry, TP, atau SL.
+- **Radar Besok, sekali ketuk tampil semua.** Screening semua saham IDX dihitung otomatis di server (GitHub Actions, `tools/radar`) setiap hari bursa ±17:50 WIB, dengan mesin yang sama persis dengan backtest 1 tahun. Aplikasi cukup mengunduh hasilnya: kedua jenis sinyal, kelima strategi tiap tingkat likuiditas, dan Top 5 gabungan langsung tampil tanpa memilih strategi satu per satu.
+- **Dua jenis sinyal × 5 tingkat likuiditas.** *Profit besar* (target dari ATR atau resisten) dan *Winrate tinggi* (TP minimal 3%). Tingkat: tanpa minimal, ≥ Rp250 jt, ≥ Rp1 M, ≥ Rp5 M, ≥ Rp20 M nilai transaksi rata-rata 20 hari; tiap tingkat punya 5 strateginya sendiri.
+- **Simbol unik untuk 32 strategi.** Profit besar memakai lencana kotak, winrate tinggi lencana bulat.
+- **Aturan beli & jual yang sama dengan backtest.** Beli di sesi berikutnya di harga pembukaan bila ≤ closing +1% (atau antre di batas itu), TP/SL mengikuti fraksi harga IDX dan dihitung dari harga beli sebenarnya, saham yang masih dipegang tidak direkomendasikan ulang, harga ≤ 60 dihindari.
+- **Riwayat Strategi** berisi hasil nyata setiap rekomendasi radar sejak go-live (winrate & akumulasi P/L real). **Riwayat Portofolio** memantau saham yang kamu masukkan Porto dengan harga Stockbit.
+- **Cek satu saham** terhadap semua strategi radar, plus chart dan broker summary dari Stockbit.
+- **Notifikasi** saat Radar Besok terbit dan saat posisi Porto menyentuh entry, TP, atau SL (WorkManager, tiap ±15 menit).
 
 ## Build
 

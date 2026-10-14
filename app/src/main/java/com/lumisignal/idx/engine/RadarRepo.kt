@@ -35,8 +35,11 @@ data class RadarState(
 object RadarRepo {
     private const val BASE = "https://raw.githubusercontent.com/vickyvam72/backuplumisignal/market-data/radar/"
 
-    /** The server run starts 16:25 WIB (after the 16:15 post-trading close) and takes about 7 minutes. */
-    val READY_AT: LocalTime = LocalTime.of(16, 30)
+    /**
+     * The server publishes ±16:30 WIB; the app releases the new buy signals to the user at 17:00 WIB
+     * (notification, home screen and strategy history all switch at the same moment).
+     */
+    val READY_AT: LocalTime = LocalTime.of(17, 0)
 
     val TIER_KEYS = listOf("semua", "250jt", "1M", "5M", "20M")
 
@@ -96,6 +99,11 @@ object RadarRepo {
         prefs().edit().putString("tier", t).apply()
     }
 
+    /** The first screening (connection check) has been done; from then on the home shows the signals. */
+    var setupDone: Boolean
+        get() = prefs().getBoolean("setup_done", false)
+        set(v) = prefs().edit().putBoolean("setup_done", v).apply()
+
     var notifiedDate: String
         get() = prefs().getString("notified", "") ?: ""
         set(v) = prefs().edit().putString("notified", v).apply()
@@ -139,9 +147,14 @@ object RadarRepo {
         _state.value = _state.value.copy(loading = true, error = null)
         try {
             val text = download("latest.json")
-            val d = parseDay(text) ?: throw IOException("Format radar tidak dikenali, perbarui aplikasi")
-            writeCached("latest.json", text)
-            _day.value = d
+            val fetched = parseDay(text) ?: throw IOException("Format radar tidak dikenali, perbarui aplikasi")
+            // A radar published before 17:00 is held back until then (a fresh install takes what there is).
+            val held = _day.value
+            val d = if (held != null && fetched.date > expectedDate()) held else fetched
+            if (d === fetched) {
+                writeCached("latest.json", text)
+                _day.value = d
+            }
             _state.value = RadarState(loading = false, fetchedAt = System.currentTimeMillis())
             d
         } catch (e: Exception) {

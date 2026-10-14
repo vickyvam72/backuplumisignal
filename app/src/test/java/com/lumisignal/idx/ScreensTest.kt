@@ -15,11 +15,8 @@ import com.lumisignal.idx.ui.components.LumiBackground
 import com.lumisignal.idx.ui.screens.HistoryScreen
 import com.lumisignal.idx.ui.screens.HomeScreen
 import com.lumisignal.idx.ui.screens.CekSahamScreen
-import com.lumisignal.idx.ui.screens.STAGE_JENIS
-import com.lumisignal.idx.ui.screens.STAGE_RESULT
-import com.lumisignal.idx.ui.screens.STAGE_TIER
 import com.lumisignal.idx.ui.screens.RadarPickScreen
-import com.lumisignal.idx.ui.screens.RadarScreen
+import com.lumisignal.idx.ui.screens.SetupScreen
 import com.lumisignal.idx.ui.screens.SignalDetailScreen
 import com.lumisignal.idx.ui.theme.LumiTheme
 import org.junit.Assume.assumeTrue
@@ -67,23 +64,26 @@ class ScreensTest {
                 LumiBackground {
                     when (screen) {
                         0 -> HomeScreen(onScreening = {})
-                        1 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> })
-                        2 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_TIER)
-                        3 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_JENIS)
-                        4 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_RESULT, initialJenis = "profit")
-                        5 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
-                        6 -> HistoryScreen(onOpenSignal = {})
-                        7 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)
-                        8 -> SignalDetailScreen(porto.id, onBack = {})
+                        1 -> SetupScreen(onBack = {}, onDone = {}, autoStart = false)
+                        2 -> SetupScreen(onBack = {}, onDone = {}, previewAllOk = true)
+                        3 -> HomeScreen(onScreening = {})
+                        4 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
+                        5 -> HistoryScreen(onOpenSignal = {})
+                        6 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)
+                        7 -> SignalDetailScreen(porto.id, onBack = {})
                         else -> com.lumisignal.idx.ui.screens.BacktestScreen()
                     }
                 }
             }
         }
-        val names = listOf("1-home", "2-scan", "3-tingkat", "4-jenis", "5-hasil", "6-pick", "7-riwayat", "8-cek-saham", "9-porto", "10-backtest")
+        val names = listOf("1-home-awal", "2-setup", "3-setup-siap", "4-beranda-sinyal", "5-pick", "6-riwayat", "7-cek-saham", "8-porto", "9-backtest")
         for (i in names.indices) {
+            if (i == 3) {
+                RadarRepo.setupDone = true
+                RadarPorto.saveAll(day)
+            }
             screen = i
-            if (i == 9) repeat(8) { Thread.sleep(1000); compose.mainClock.advanceTimeBy(500) }
+            if (i == 8) repeat(8) { Thread.sleep(1000); compose.mainClock.advanceTimeBy(500) }
             compose.mainClock.advanceTimeBy(1500)
             Thread.sleep(800)
             compose.mainClock.advanceTimeBy(1500)

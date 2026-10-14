@@ -33,6 +33,15 @@ object Monitor {
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build()
         WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, req)
+        SignalAlarm.schedule(ctx)
+    }
+
+    /** True when the 15-minute background audit is registered with the system. */
+    fun isScheduled(ctx: Context): Boolean = try {
+        WorkManager.getInstance(ctx).getWorkInfosForUniqueWork(WORK_NAME).get()
+            .any { !it.state.isFinished }
+    } catch (e: Exception) {
+        false
     }
 
     fun runNow(ctx: Context) {
@@ -126,28 +135,29 @@ object Monitor {
     }
 
     /**
-     * After the close the server publishes the new Radar Besok (±16:30 WIB). Download it once it is due
-     * and tell the user, so the results are ready before they open the app.
+     * 17:00 WIB: the new buy signals are released. Download the radar (published ±16:30), put every pick
+     * into the strategy history (audited with live prices from then on) and notify the user once.
+     * Nothing happens before the first screening (connection check) has been done.
      */
     private suspend fun checkRadar(ctx: Context) {
         try {
             val now = Market.now()
-            if (!RadarRepo.isStale(now)) return
-            // Only downloaded: picks enter the strategy history when the user runs the screening.
-            val d = RadarRepo.refresh()
-            if (d.date >= RadarRepo.expectedDate(now) && RadarRepo.notifiedDate != d.date) {
-                RadarRepo.notifiedDate = d.date
-                val tier = RadarRepo.tier.value
-                val parts = listOf("profit", "winrate").map { j ->
-                    val top = d.board(tier, j)?.top5?.filter { it.valid }.orEmpty().joinToString(", ") { it.ticker }
-                    "${d.jenisLabel(j)}: ${top.ifBlank { "tidak ada sinyal" }}"
-                }
-                Notifier.radarReady(
-                    ctx,
-                    "Radar Besok siap · closing ${Market.shortDate(d.date)}",
-                    "${com.lumisignal.idx.UiConfig.TOP5_TITLE} — " + parts.joinToString(" · "),
-                )
+            if (!RadarRepo.setupDone) return
+            val d = if (RadarRepo.isStale(now)) RadarRepo.refresh() else RadarRepo.day.value ?: return
+            if (d.date < RadarRepo.expectedDate(now)) return
+            RadarPorto.saveAll(d)
+            if (RadarRepo.notifiedDate == d.date) return
+            RadarRepo.notifiedDate = d.date
+            val tier = RadarRepo.tier.value
+            val parts = listOf("profit", "winrate").map { j ->
+                val top = d.board(tier, j)?.top5?.filter { it.valid }.orEmpty().joinToString(", ") { it.ticker }
+                "${d.jenisLabel(j)}: ${top.ifBlank { "tidak ada sinyal" }}"
             }
+            Notifier.radarReady(
+                ctx,
+                "Sinyal beli untuk ${Market.prettyDate(RadarPorto.nextSession(d.date))}",
+                parts.joinToString(" · ") + ". Sudah masuk Riwayat Strategi.",
+            )
         } catch (e: Exception) {
         }
     }

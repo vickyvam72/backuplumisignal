@@ -60,7 +60,7 @@ import com.lumisignal.idx.ui.screens.CekSahamScreen
 import com.lumisignal.idx.ui.screens.BacktestScreen
 import com.lumisignal.idx.ui.screens.PermissionScreen
 import com.lumisignal.idx.ui.screens.RadarPickScreen
-import com.lumisignal.idx.ui.screens.RadarScreen
+import com.lumisignal.idx.ui.screens.SetupScreen
 import com.lumisignal.idx.ui.screens.SettingsScreen
 import com.lumisignal.idx.ui.screens.SignalDetailScreen
 import com.lumisignal.idx.ui.theme.Lumi
@@ -68,6 +68,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Navigation requested from outside Compose (notification taps). */
 val PendingNav = MutableStateFlow<String?>(null)
+
+/** Tab requested from outside the tab bar (signal notification → Beranda). */
+val HomeTab = MutableStateFlow<Int?>(null)
 
 @Composable
 fun AppRoot() {
@@ -97,6 +100,11 @@ private fun MainNav() {
         val route = pending ?: return@LaunchedEffect
         PendingNav.value = null
         try {
+            if (route == "home") {
+                HomeTab.value = 0
+                nav.popBackStack("tabs", false)
+                return@LaunchedEffect
+            }
             nav.navigate(route) { launchSingleTop = true }
         } catch (e: Exception) {
         }
@@ -122,7 +130,8 @@ private fun MainNav() {
             nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}")
         }
         composable("radar") {
-            RadarScreen(onBack = { nav.popBackStack() }, onOpenPick = openPick)
+            // First screening = connection check; the old step-by-step RadarScreen stays in the code base.
+            SetupScreen(onBack = { nav.popBackStack() }, onDone = { HomeTab.value = 0; nav.popBackStack() })
         }
         composable("pick/{tier}/{jenis}/{sid}/{ticker}/{g}") { entry ->
             val a = entry.arguments
@@ -146,10 +155,17 @@ private fun MainNav() {
 @Composable
 private fun TabsScreen(nav: NavHostController) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val wanted by HomeTab.collectAsStateWithLifecycle()
+    LaunchedEffect(wanted) {
+        wanted?.let { tab = it; HomeTab.value = null }
+    }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> HomeScreen(onScreening = { nav.navigate("radar") { launchSingleTop = true } })
+                0 -> HomeScreen(
+                    onScreening = { nav.navigate("radar") { launchSingleTop = true } },
+                    onOpenPick = { tier, jenis, sid, ticker, g -> nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}") },
+                )
                 1 -> HistoryScreen(onOpenSignal = { nav.navigate("detail/$it") })
                 2 -> CekSahamScreen(
                     onOpenPick = { tier, jenis, sid, ticker, g -> nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}") },

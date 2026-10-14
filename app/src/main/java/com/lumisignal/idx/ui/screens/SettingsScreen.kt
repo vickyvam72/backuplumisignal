@@ -137,7 +137,7 @@ fun SettingsScreen() {
         SectionHeader("Cara kerja Lumi")
         Spacer(Modifier.height(8.dp))
         GlassCard(Modifier.fillMaxWidth()) {
-            Bullet("Radar Besok dihitung otomatis setiap hari bursa ±16:30 WIB dari closing semua saham IDX. Sekali screening, pilih jenis sinyal dan Top 5 Saham IDX langsung tampil.")
+            Bullet("Sinyal beli dihitung dari closing semua saham IDX dan muncul otomatis di Beranda setiap hari bursa pukul 17.00 WIB, lengkap dengan notifikasi. Semua sinyal langsung masuk Riwayat Strategi dan diaudit dengan harga live.")
             Bullet("Dua jenis sinyal: Profit tinggi (target lebar dari volatilitas atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Saham yang diproses: nilai transaksi rata-rata minimal Rp250 juta per hari.")
             Bullet("Beli di sesi berikutnya: di harga pembukaan bila ≤ closing +1%, kalau dibuka lebih tinggi antre di closing +1%. Tidak terisi di sesi itu = batal. Saham yang masih dipegang tidak direkomendasikan lagi.")
             Bullet("TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah) dan dihitung dari harga beli sebenarnya. Kalau belum kena TP/SL, posisi dijual di closing hari terakhir masa hold.")
@@ -176,6 +176,7 @@ fun SettingsScreen() {
                     if (strategy) {
                         Graph.history.removeWhere { it.source == SOURCE_STRATEGY }
                         RadarRepo.clearLocal()
+                        RadarRepo.setupDone = false
                     } else {
                         Graph.history.removeWhere { it.source == SOURCE_PORTO }
                     }

@@ -73,7 +73,8 @@ object RadarRepo {
         if (ready) return
         appContext = ctx.applicationContext
         dir = File(appContext.filesDir, "radar").apply { mkdirs() }
-        _tier.value = prefs().getString("tier", "1M") ?: "1M"
+        _tier.value = if (!com.lumisignal.idx.UiConfig.SHOW_TIER_PICKER) com.lumisignal.idx.UiConfig.FIXED_TIER
+        else prefs().getString("tier", "1M") ?: "1M"
         _day.value = readCached("latest.json")?.let { parseDay(it) }
         _stocks.value = readCached("stocks.json")?.let { runCatching { LumiJson.decodeFromString(RadarStocks.serializer(), it) }.getOrNull() }
         _ledgers.value = TIER_KEYS.mapNotNull { t ->
@@ -90,7 +91,7 @@ object RadarRepo {
         set(v) = prefs().edit().putString("jenis", v).apply()
 
     fun setTier(t: String) {
-        if (t !in TIER_KEYS) return
+        if (t !in TIER_KEYS || !com.lumisignal.idx.UiConfig.SHOW_TIER_PICKER) return
         _tier.value = t
         prefs().edit().putString("tier", t).apply()
     }

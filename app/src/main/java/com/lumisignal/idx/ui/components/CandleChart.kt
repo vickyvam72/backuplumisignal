@@ -81,7 +81,10 @@ fun CandleChart(
         hi += pad
         fun py(p: Double): Float = (priceH * (1 - (p - lo) / (hi - lo))).toFloat()
 
-        val step = chartW / view.size
+        // Leave a column on the right for the level labels so they never cover the candles.
+        val hasLabels = plan != null || levels.isNotEmpty()
+        val plotW = if (hasLabels) chartW - 84.dp.toPx() else chartW
+        val step = plotW / view.size
         val bodyW = max(2f, step * 0.62f)
 
         // grid
@@ -165,7 +168,7 @@ fun CandleChart(
         val idxs = listOf(0, view.size / 2, view.size - 1).distinct()
         for (i in idxs) {
             val text = Market.shortDate(view[i].date)
-            val x = (i * step + step / 2 - 18.dp.toPx()).coerceIn(0f, chartW - 36.dp.toPx())
+            val x = (i * step + step / 2 - 18.dp.toPx()).coerceIn(0f, plotW - 36.dp.toPx())
             label(measurer, text, Offset(x, dateY - 6.dp.toPx()), Lumi.TextMuted)
         }
     }

@@ -198,7 +198,7 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                                 "profit" -> "PROFIT TINGGI"
                                 "winrate" -> "WINRATE TINGGI"
                                 else -> "ANALISA MANUAL"
-                            } + if (tag.combined) " · TOP 5 GABUNGAN" else "",
+                            } + if (tag.combined) " · ${com.lumisignal.idx.UiConfig.TOP5_TITLE.uppercase()}" else "",
                             style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
                         )
                         Text(tag.name, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)

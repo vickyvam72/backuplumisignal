@@ -104,14 +104,17 @@ object RadarPorto {
      * Returns how many were new.
      */
     /** Every pick of every tier and signal type of a radar into the strategy history. */
-    fun saveAll(day: RadarDay): Int =
-        RadarRepo.TIER_KEYS.sumOf { t -> listOf("profit", "winrate").sumOf { j -> saveScreening(day, t, j) } }
+    fun saveAll(day: RadarDay): Int {
+        val tiers = if (com.lumisignal.idx.UiConfig.SHOW_TIER_PICKER) RadarRepo.TIER_KEYS else listOf(com.lumisignal.idx.UiConfig.FIXED_TIER)
+        return tiers.sumOf { t -> listOf("profit", "winrate").sumOf { j -> saveScreening(day, t, j) } }
+    }
 
     fun saveScreening(day: RadarDay, tier: String, jenis: String): Int {
         val board = day.board(tier, jenis) ?: return 0
         val have = Graph.history.items.value.mapTo(HashSet()) { it.id }
         val fresh = mutableListOf<Signal>()
-        for (bs in board.strategies) for (p in bs.picks) {
+        // Only what the app shows is saved and audited (see UiConfig).
+        if (com.lumisignal.idx.UiConfig.SHOW_STRATEGIES) for (bs in board.strategies) for (p in bs.picks) {
             if (!p.valid || key(day.date, tier, jenis, bs.id, p.ticker, false) in have) continue
             fresh += Tracker.track(build(day, tier, jenis, bs.id, p, false, SOURCE_STRATEGY, null))
         }

@@ -101,7 +101,8 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "${d.jenisLabel(jenis).uppercase()} · ${d.tierLabel(tier)}" + if (combined) " · TOP 5 GABUNGAN" else "",
+                            d.jenisLabel(jenis).uppercase() + (if (com.lumisignal.idx.UiConfig.SHOW_TIER_PICKER) " · ${d.tierLabel(tier)}" else "") +
+                                if (combined) " · ${com.lumisignal.idx.UiConfig.TOP5_TITLE.uppercase()}" else "",
                             style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
                         )
                         Text(meta?.name ?: "Strategi $sid", style = MaterialTheme.typography.titleMedium, color = Lumi.Text)

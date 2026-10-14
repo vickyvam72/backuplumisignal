@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import com.lumisignal.idx.UiConfig
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -116,11 +117,11 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
+        if (UiConfig.SHOW_TIER_PICKER) item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
         item { Segmented(listOf("Profit tinggi", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0; RadarRepo.jenis = if (it == 1) "winrate" else "profit" }) }
-        item {
+        if (UiConfig.SHOW_STRATEGIES) item {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip("Top 5 gabungan", sel == 0, Lumi.Sky, null) { sel = 0 }
+                FilterChip(UiConfig.TOP5_TITLE, sel == 0, Lumi.Sky, null) { sel = 0 }
                 strategyIds.forEach { id ->
                     val meta = d?.strategy(id)
                     val tag = all.firstOrNull { it.strategyId == id }?.radar
@@ -130,10 +131,10 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
             }
         }
         item {
-            val title = if (sel == 0) "Top 5 gabungan" else d?.strategy(sel)?.name ?: all.firstOrNull { it.strategyId == sel }?.radar?.name ?: "Strategi"
-            WinStatsCard(title, "Hasil screening ${d?.tierLabel(tier) ?: tier} · dipantau harga Stockbit", winStats(rows), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE))
+            val title = if (sel == 0) UiConfig.TOP5_TITLE else d?.strategy(sel)?.name ?: all.firstOrNull { it.strategyId == sel }?.radar?.name ?: "Strategi"
+            WinStatsCard(title, signalRange(rows), winStats(rows), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE))
         }
-        if (sel == 0 && all.isNotEmpty()) item { Leaderboard(d, jenis, all, strategyIds) { sel = it } }
+        if (UiConfig.SHOW_STRATEGIES && sel == 0 && all.isNotEmpty()) item { Leaderboard(d, jenis, all, strategyIds) { sel = it } }
         if (rows.isEmpty()) {
             item {
                 EmptyState(
@@ -185,6 +186,14 @@ private fun Leaderboard(d: RadarDay?, jenis: String, all: List<com.lumisignal.id
             }
         }
     }
+}
+
+/** "13 Okt – 20 Okt 2026": the signal dates covered by a list. */
+private fun signalRange(rows: List<com.lumisignal.idx.data.Signal>): String {
+    if (rows.isEmpty()) return "Belum ada sinyal"
+    val a = rows.minOf { it.refDate }
+    val b = rows.maxOf { it.refDate }
+    return if (a == b) "Sinyal ${Market.prettyDate(a, false)}" else "Sinyal ${Market.shortDate(a)} – ${Market.prettyDate(b, false)}"
 }
 
 @Composable

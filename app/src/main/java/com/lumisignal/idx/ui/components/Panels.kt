@@ -221,6 +221,10 @@ data class WinStats(
     val winRate: Double?,
     /** Sum of realised P/L % of every closed trade. */
     val totalPnl: Double?,
+    /** Positions currently held (bought, not sold yet). */
+    val holding: Int = 0,
+    val tp: Int = 0,
+    val sl: Int = 0,
 )
 
 fun winStats(list: List<Signal>): WinStats {
@@ -238,6 +242,9 @@ fun winStats(list: List<Signal>): WinStats {
         cancelled = cancelled,
         winRate = if (decided > 0) wins * 100.0 / decided else null,
         totalPnl = if (closedPnl.isNotEmpty()) closedPnl.sum() else null,
+        holding = list.count { it.status == com.lumisignal.idx.data.SignalStatus.ACTIVE },
+        tp = list.count { it.status == com.lumisignal.idx.data.SignalStatus.TP },
+        sl = list.count { it.status == com.lumisignal.idx.data.SignalStatus.SL },
     )
 }
 
@@ -284,11 +291,14 @@ fun WinStatsCard(title: String, subtitle: String, stats: WinStats, accent: Color
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("Total", "${stats.total}", Modifier.weight(1f))
-            StatTile("Berjalan", "${stats.open}", Modifier.weight(1f), Lumi.Sky)
-            StatTile(
-                "Akumulasi P/L", stats.totalPnl?.let { Fmt.pct(it) } ?: "–", Modifier.weight(1f),
-                if ((stats.totalPnl ?: 0.0) >= 0) Lumi.Green else Lumi.Red,
-            )
+            StatTile("Hold", "${stats.holding}", Modifier.weight(1f), Lumi.Sky)
+            StatTile("TP", "${stats.tp}", Modifier.weight(1f), Lumi.Green)
+            StatTile("SL", "${stats.sl}", Modifier.weight(1f), Lumi.Red)
         }
+        Spacer(Modifier.height(8.dp))
+        StatTile(
+            "Akumulasi P/L", stats.totalPnl?.let { Fmt.pct(it) } ?: "–", Modifier.fillMaxWidth(),
+            if ((stats.totalPnl ?: 0.0) >= 0) Lumi.Green else Lumi.Red,
+        )
     }
 }

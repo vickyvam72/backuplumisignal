@@ -144,7 +144,7 @@ object Monitor {
                 Notifier.radarReady(
                     ctx,
                     "Radar Besok siap · closing ${Market.shortDate(d.date)}",
-                    "Top 5 gabungan ${d.tierLabel(tier)} — " + parts.joinToString(" · "),
+                    "${com.lumisignal.idx.UiConfig.TOP5_TITLE} — " + parts.joinToString(" · "),
                 )
             }
         } catch (e: Exception) {

@@ -2,6 +2,7 @@ package com.lumisignal.idx.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
+import com.lumisignal.idx.UiConfig
 import androidx.compose.ui.platform.LocalContext
 import com.lumisignal.idx.service.Monitor
 import androidx.compose.foundation.verticalScroll
@@ -111,7 +112,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
         val left = 3200L - (System.currentTimeMillis() - started)
         if (left > 0) kotlinx.coroutines.delay(left)
         scanDone = true
-        if (RadarRepo.day.value != null) stage = STAGE_TIER
+        if (RadarRepo.day.value != null) stage = FIRST_STAGE
     }
     val ctx = LocalContext.current
     // After a screening every pick of every tier and signal type goes into the strategy history,
@@ -123,7 +124,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
     val back: () -> Unit = {
         when (stage) {
             STAGE_RESULT -> stage = STAGE_JENIS
-            STAGE_JENIS -> stage = STAGE_TIER
+            STAGE_JENIS -> if (UiConfig.SHOW_TIER_PICKER) stage = STAGE_TIER else onBack()
             else -> onBack()
         }
     }
@@ -151,12 +152,12 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
                     Text(state.error ?: "Coba lagi sebentar.", style = MaterialTheme.typography.bodyMedium, color = Lumi.TextDim)
                     Spacer(Modifier.height(14.dp))
                     GradientButton("Coba lagi", {
-                        scope.launch { runCatching { RadarRepo.refresh() }; if (RadarRepo.day.value != null) stage = STAGE_TIER }
+                        scope.launch { runCatching { RadarRepo.refresh() }; if (RadarRepo.day.value != null) stage = FIRST_STAGE }
                     }, Modifier.fillMaxWidth())
                 }
             }
-            stage == STAGE_TIER || stage == STAGE_SCAN -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
-            stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; RadarRepo.jenis = it; stage = STAGE_RESULT }
+            UiConfig.SHOW_TIER_PICKER && (stage == STAGE_TIER || stage == STAGE_SCAN) -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
+            stage == STAGE_JENIS || stage == STAGE_TIER || stage == STAGE_SCAN -> JenisStep(d, tier, jenis) { jenis = it; RadarRepo.jenis = it; stage = STAGE_RESULT }
             else -> ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
         }
     }
@@ -197,7 +198,12 @@ private fun ScanView(d: RadarDay?) {
     }
 }
 
+/** First step after the scan: the tier picker, or straight to the signal type when it is hidden. */
+private val FIRST_STAGE get() = if (UiConfig.SHOW_TIER_PICKER) STAGE_TIER else STAGE_JENIS
+
 private fun signalCount(d: RadarDay, tier: String, jenis: String? = null): Int =
+    if (!UiConfig.SHOW_STRATEGIES) d.boards[tier].orEmpty().filterKeys { jenis == null || it == jenis }.values.sumOf { b -> b.top5.count { it.valid } }
+    else
     d.boards[tier].orEmpty().filterKeys { jenis == null || it == jenis }.values.sumOf { b ->
         b.strategies.flatMap { s -> s.picks.filter { it.valid }.map { it.ticker } }.toSet().size
     }
@@ -253,7 +259,7 @@ private fun JenisStep(d: RadarDay, tier: String, selected: String, onPick: (Stri
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
         DateBanner(d)
         Spacer(Modifier.height(12.dp))
-        Pill(d.tierLabel(tier), Lumi.Sky)
+        if (UiConfig.SHOW_TIER_PICKER) Pill(d.tierLabel(tier), Lumi.Sky)
         Spacer(Modifier.height(12.dp))
         listOf("profit", "winrate").forEach { j ->
             val color = if (j == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
@@ -294,7 +300,7 @@ private fun ResultList(
     ) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ChangeChip(d.tierLabel(tier), Lumi.Sky, onChangeTier)
+                if (UiConfig.SHOW_TIER_PICKER) ChangeChip(d.tierLabel(tier), Lumi.Sky, onChangeTier)
                 ChangeChip(d.jenisLabel(jenis), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE), onChangeJenis)
             }
         }
@@ -304,8 +310,8 @@ private fun ResultList(
             item { EmptyState("Belum ada data", "Radar untuk pilihan ini belum tersedia.") }
         } else {
             item { Top5Card(d, tier, jenis, board, onOpenPick) }
-            item { SectionHeaderLine("Per strategi", "Masing-masing maksimal 5 saham terbaik") }
-            for (bs in board.strategies) {
+            if (UiConfig.SHOW_STRATEGIES) item { SectionHeaderLine("Per strategi", "Masing-masing maksimal 5 saham terbaik") }
+            if (UiConfig.SHOW_STRATEGIES) for (bs in board.strategies) {
                 val spec = specs.strategies.firstOrNull { it.id == bs.id } ?: continue
                 item(key = "s-${bs.id}") { StrategyCard(d, tier, jenis, spec, bs, onOpenPick) }
             }
@@ -437,8 +443,8 @@ private fun Top5Card(d: RadarDay, tier: String, jenis: String, board: Board, onO
             ) { Text("5", style = NumberStyle.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold), color = Color.White) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Top 5 gabungan", style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                Text("5 saham pilihan terbaik dari kelima strategi di bawah", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Text(UiConfig.TOP5_TITLE, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
+                Text(if (UiConfig.SHOW_STRATEGIES) "5 saham pilihan terbaik dari kelima strategi di bawah" else "5 saham pilihan terbaik hari ini", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
             }
         }
         Spacer(Modifier.height(10.dp))

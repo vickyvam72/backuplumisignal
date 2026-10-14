@@ -1,6 +1,7 @@
 package com.lumisignal.idx.ui.screens
 
 import androidx.compose.foundation.background
+import com.lumisignal.idx.UiConfig
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,10 +83,18 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 /** A radar signal of this stock, if any (preferred: the user's own liquidity tier). */
-private data class RadarMatch(val tier: String, val jenis: String, val sid: Int, val pick: RadarPick)
+private data class RadarMatch(val tier: String, val jenis: String, val sid: Int, val pick: RadarPick, val combined: Boolean = false)
 
 private fun radarMatch(day: RadarDay?, info: StockInfo?, symbol: String, tier: String): RadarMatch? {
-    if (day == null || info == null) return null
+    if (day == null) return null
+    if (!UiConfig.SHOW_STRATEGIES) {
+        for (j in listOf("profit", "winrate")) {
+            val p = day.board(UiConfig.FIXED_TIER, j)?.top5?.firstOrNull { it.ticker == symbol && it.valid } ?: continue
+            return RadarMatch(UiConfig.FIXED_TIER, j, p.sid ?: 0, p, combined = true)
+        }
+        return null
+    }
+    if (info == null) return null
     val hits = info.hits.filter { it.status == "top5" }.sortedWith(compareBy({ it.tier != tier }, { RadarRepo.TIER_KEYS.indexOf(it.tier) }))
     for (h in hits) {
         val p = day.board(h.tier, h.jenis)?.strategies?.firstOrNull { it.id == h.sid }?.picks?.firstOrNull { it.ticker == symbol && it.valid }
@@ -212,7 +221,7 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
             if (match != null && day != null) RadarPorto.plan(day, match.tier, match.jenis, match.sid, match.pick) else Levels.manualPlan(bars, sr)
         }
         val existing = remember(items, match, r) {
-            if (match != null && day != null) RadarPorto.find(day.date, match.tier, match.jenis, match.sid, symbol, false)
+            if (match != null && day != null) RadarPorto.find(day.date, match.tier, match.jenis, match.sid, symbol, match.combined)
             else RadarPorto.findManual(r.refDate, symbol)
         }
 
@@ -236,14 +245,16 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
         // ---- radar signal banner
         if (match != null && day != null) {
             val meta = day.strategy(match.sid)
-            GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Green, padding = 14.dp, onClick = { onOpenPick(match.tier, match.jenis, match.sid, symbol, false) }) {
+            GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Green, padding = 14.dp, onClick = { onOpenPick(match.tier, match.jenis, match.sid, symbol, match.combined) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadarBadge(meta?.icon ?: "", meta?.color ?: "#3D8BFF", match.jenis, 40.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("MASUK RADAR BESOK", style = MaterialTheme.typography.labelSmall, color = Lumi.Green)
-                        Text(meta?.name ?: "", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
-                        Text("${day.jenisLabel(match.jenis)} · ${day.tierLabel(match.tier)} · rencana di bawah mengikuti sinyal ini", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        Text(if (match.combined) UiConfig.TOP5_TITLE else meta?.name ?: "", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+                        Text(
+                            day.jenisLabel(match.jenis) + (if (UiConfig.SHOW_TIER_PICKER) " · ${day.tierLabel(match.tier)}" else "") + " · rencana di bawah mengikuti sinyal ini",
+                            style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                     }
                     Pill("Lihat", Lumi.Green)
                 }
@@ -313,7 +324,7 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
         if (dialog) {
             RadarPortoDialog(symbol, plan.entryHigh, onDismiss = { dialog = false }) { price ->
                 dialog = false
-                val s = if (match != null && day != null) RadarPorto.add(day, match.tier, match.jenis, match.sid, match.pick, false, price)
+                val s = if (match != null && day != null) RadarPorto.add(day, match.tier, match.jenis, match.sid, match.pick, match.combined, price)
                 else {
                     val why = buildList {
                         sr.supports.firstOrNull()?.let { add("Support 1 di ${Fmt.price(it.price)}, support 2 di ${Fmt.price(sr.supports.getOrNull(1)?.price)}") }
@@ -359,6 +370,25 @@ private fun RadarCheckBody(day: RadarDay?, symbol: String, info: StockInfo, tier
             StatTile("Volume", info.volRatio?.let { Fmt.ratio(it) + " avg" } ?: "–", Modifier.weight(1f))
             StatTile("Nilai tx 20h", Fmt.idr(info.valueMa20), Modifier.weight(1f))
         }
+        if (!UiConfig.SHOW_STRATEGIES) {
+            Spacer(Modifier.height(12.dp))
+            val inTop = listOf("profit", "winrate").filter { j -> day?.board(UiConfig.FIXED_TIER, j)?.top5?.any { it.ticker == symbol && it.valid } == true }
+            if (inTop.isEmpty()) {
+                Text("Belum masuk ${UiConfig.TOP5_TITLE} di closing ini.", style = MaterialTheme.typography.titleSmall, color = Lumi.TextDim)
+            } else inTop.forEach { j ->
+                val p = day!!.board(UiConfig.FIXED_TIER, j)!!.top5.first { it.ticker == symbol }
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Lumi.Bg.copy(alpha = 0.45f))
+                        .border(1.dp, Lumi.Green.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                        .clickable { onOpenPick(UiConfig.FIXED_TIER, j, p.sid ?: 0, symbol, true) }.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Masuk ${UiConfig.TOP5_TITLE} · ${day.jenisLabel(j)} (peringkat ${p.rank})", style = MaterialTheme.typography.titleSmall, color = Lumi.Green, modifier = Modifier.weight(1f))
+                    Pill("Lihat", Lumi.Green)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        } else {
         Spacer(Modifier.height(8.dp))
         Text(
             if (info.eligible.isEmpty()) "Belum masuk tingkat likuiditas mana pun (harga ≤ 60, jarang ditransaksikan, ARA/ARB, atau data kurang)."
@@ -374,6 +404,7 @@ private fun RadarCheckBody(day: RadarDay?, symbol: String, info: StockInfo, tier
                 HitRow(day, h) { onOpenPick(h.tier, h.jenis, h.sid, symbol, false) }
                 Spacer(Modifier.height(8.dp))
             }
+        }
         }
     }
 }

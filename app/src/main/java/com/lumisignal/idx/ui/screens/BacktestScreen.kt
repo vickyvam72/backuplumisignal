@@ -1,5 +1,6 @@
 package com.lumisignal.idx.ui.screens
 
+import com.lumisignal.idx.UiConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -125,11 +126,11 @@ fun BacktestScreen() {
                     }
                 }
             }
-            item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
+            if (UiConfig.SHOW_TIER_PICKER) item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
             item { Segmented(listOf("Profit tinggi", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0 }) }
-            item {
+            if (UiConfig.SHOW_STRATEGIES) item {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BtChip("Top 5 gabungan", sel == 0, Lumi.Sky, null, jenis) { sel = 0 }
+                    BtChip(UiConfig.TOP5_TITLE, sel == 0, Lumi.Sky, null, jenis) { sel = 0 }
                     ids.forEach { id ->
                         val meta = d?.strategy(id)
                         BtChip(meta?.name ?: "Strategi $id", sel == id, hexColor(meta?.color ?: "#3D8BFF"), meta, jenis) { sel = id }
@@ -140,7 +141,7 @@ fun BacktestScreen() {
                 loading -> item { LoadingBlock("Memuat backtest…") }
                 failed -> item { EmptyState("Backtest belum bisa dimuat", "Periksa koneksi internet lalu buka lagi tab ini.") }
                 else -> {
-                    item { BtStatsCard(if (sel == 0) "Top 5 gabungan" else d?.strategy(sel)?.name ?: "Strategi", rows, d, tier, jenis, index?.months?.firstOrNull { it.month == month }?.label ?: month) }
+                    item { BtStatsCard(if (sel == 0) UiConfig.TOP5_TITLE else d?.strategy(sel)?.name ?: "Strategi", rows, d, tier, jenis, index?.months?.firstOrNull { it.month == month }?.label ?: month) }
                     if (rows.isEmpty()) {
                         item { EmptyState("Tidak ada transaksi", "Strategi ini tidak memberi sinyal yang terbeli di bulan dan tingkat likuiditas ini.") }
                     } else {
@@ -181,7 +182,7 @@ private fun BtStatsCard(title: String, rows: List<BtTrade>, d: RadarDay?, tier: 
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                Text("$monthLabel · ${d?.tierLabel(tier) ?: tier}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Text(if (UiConfig.SHOW_TIER_PICKER) "$monthLabel · ${d?.tierLabel(tier) ?: tier}" else monthLabel, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill("$wins menang", Lumi.Green)
@@ -192,9 +193,11 @@ private fun BtStatsCard(title: String, rows: List<BtTrade>, d: RadarDay?, tier: 
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("Transaksi", "${rows.size}", Modifier.weight(1f))
-            StatTile("Rata hold", if (rows.isEmpty()) "–" else "${Fmt.num(rows.sumOf { it.hold }.toDouble() / rows.size)} hr", Modifier.weight(1f), Lumi.Amber)
-            StatTile("Akumulasi P/L", if (rows.isEmpty()) "–" else Fmt.pct(total), Modifier.weight(1.2f), if (total >= 0) Lumi.Green else Lumi.Red)
+            StatTile("TP", "${rows.count { it.exit == "TP" }}", Modifier.weight(1f), Lumi.Green)
+            StatTile("SL", "${rows.count { it.exit == "SL" }}", Modifier.weight(1f), Lumi.Red)
         }
+        Spacer(Modifier.height(8.dp))
+        StatTile("Akumulasi P/L", if (rows.isEmpty()) "–" else Fmt.pct(total), Modifier.fillMaxWidth(), if (total >= 0) Lumi.Green else Lumi.Red)
         Spacer(Modifier.height(8.dp))
         Text(
             "Sinyal dari closing, dibeli sesi berikutnya (≤ closing +1%), dijual saat kena TP, SL, atau di closing hari terakhir masa hold. P/L murni harga beli ke harga jual, tanpa fee.",

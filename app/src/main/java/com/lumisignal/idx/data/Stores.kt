@@ -91,6 +91,11 @@ class CacheStore(private val context: Context) {
         get() = prefs.getString("last_daily", "") ?: ""
         set(v) = prefs.edit().putString("last_daily", v).apply()
 
+    /** Day the Stockbit token was last renewed (renewed automatically once a day). */
+    var lastTokenRefresh: String
+        get() = prefs.getString("last_token_refresh", "") ?: ""
+        set(v) = prefs.edit().putString("last_token_refresh", v).apply()
+
     var loginNotifiedDay: String
         get() = prefs.getString("login_notified", "") ?: ""
         set(v) = prefs.edit().putString("login_notified", v).apply()

@@ -84,7 +84,7 @@ fun SettingsScreen() {
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                if (hasRefresh) "Token diperpanjang otomatis sebelum kedaluwarsa, selama aplikasi berjalan setidaknya seminggu sekali."
+                if (hasRefresh) "Token diperbarui otomatis setiap hari" + (Graph.cache.lastTokenRefresh.takeIf { it.isNotBlank() }?.let { " · terakhir ${com.lumisignal.idx.engine.Market.shortDate(it)}" } ?: "") + ". Kamu tidak perlu login ulang selama aplikasi berjalan setidaknya seminggu sekali."
                 else "Token Stockbit berlaku ±24 jam. Jika habis, kamu akan diminta login ulang.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )

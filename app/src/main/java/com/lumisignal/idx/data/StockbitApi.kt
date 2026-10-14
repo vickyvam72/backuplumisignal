@@ -174,6 +174,12 @@ class StockbitApi(private val session: SessionStore) {
         return raw.code in 200..299
     }
 
+    /** Forces a token renewal with the refresh token (daily renewal). True when new tokens were saved. */
+    suspend fun refreshNow(): Boolean {
+        val access = session.access ?: return false
+        return tryRefresh(access) && session.access != access
+    }
+
     /** Refreshes ahead of expiry (called by the background worker). */
     suspend fun refreshIfNeeded() {
         val access = session.access ?: return

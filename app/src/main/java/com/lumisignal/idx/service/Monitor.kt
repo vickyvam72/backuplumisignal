@@ -47,6 +47,7 @@ object Monitor {
     suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int {
         checkRadar(ctx)
         if (Graph.session.access == null) return 0
+        dailyTokenRefresh()
         val now = Market.now()
         val today = Market.today()
         // Open signals, plus those closed today: a same-day TP/SL can still be corrected with the
@@ -132,8 +133,8 @@ object Monitor {
         try {
             val now = Market.now()
             if (!RadarRepo.isStale(now)) return
+            // Only downloaded: picks enter the strategy history when the user runs the screening.
             val d = RadarRepo.refresh()
-            RadarPorto.saveAll(d)
             if (d.date >= RadarRepo.expectedDate(now) && RadarRepo.notifiedDate != d.date) {
                 RadarRepo.notifiedDate = d.date
                 val tier = RadarRepo.tier.value
@@ -147,6 +148,16 @@ object Monitor {
                     "${com.lumisignal.idx.UiConfig.TOP5_TITLE} — " + parts.joinToString(" · "),
                 )
             }
+        } catch (e: Exception) {
+        }
+    }
+
+    /** Renews the Stockbit token once a day (refresh token), even when nothing is being tracked. */
+    private suspend fun dailyTokenRefresh() {
+        val today = Market.today()
+        if (Graph.cache.lastTokenRefresh == today) return
+        try {
+            if (Graph.api.refreshNow()) Graph.cache.lastTokenRefresh = today
         } catch (e: Exception) {
         }
     }

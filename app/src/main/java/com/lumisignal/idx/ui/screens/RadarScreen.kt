@@ -535,6 +535,13 @@ private fun NoteBox(title: String, body: String, color: Color) {
 fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, combined: Boolean, rankLabel: String, onClick: () -> Unit) {
     val items by com.lumisignal.idx.Graph.history.items.collectAsStateWithLifecycle()
     val inPorto = remember(items, d.date, tier, jenis, sid, p.ticker) { RadarPorto.find(d.date, tier, jenis, sid, p.ticker, combined) != null }
+    var dialog by remember { mutableStateOf(false) }
+    if (dialog) {
+        RadarPortoDialog(p.ticker, p.entryHigh, onDismiss = { dialog = false }) { price ->
+            dialog = false
+            RadarPorto.add(d, tier, jenis, sid, p, combined, price)
+        }
+    }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lumi.Bg.copy(alpha = 0.45f))
             .border(1.dp, Lumi.Border.copy(alpha = 0.7f), RoundedCornerShape(16.dp)).clickable(onClick = onClick)
@@ -572,11 +579,18 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LevelChip("TP", p.tp, p.tpPct, Lumi.Green, Modifier.weight(1f))
             LevelChip("SL", p.sl, p.slPct?.let { -it }, Lumi.Red, Modifier.weight(1f))
-            Column(
-                Modifier.weight(0.7f).clip(RoundedCornerShape(10.dp)).background(Lumi.SurfaceHi.copy(alpha = 0.6f)).padding(horizontal = 8.dp, vertical = 5.dp),
+            val c = if (inPorto) Lumi.Green else Lumi.Blue
+            Box(
+                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
+                    .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .clickable { if (inPorto) onClick() else dialog = true }.padding(horizontal = 6.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("HOLD", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
-                Text("${p.hold} hari", style = NumberStyle.copy(fontSize = 13.sp), color = Lumi.Text)
+                Text(
+                    if (inPorto) "✓ Sudah di Porto" else "+ Tambahkan ke Porto",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    color = if (inPorto) Lumi.Green else Lumi.Text, maxLines = 2,
+                )
             }
         }
     }

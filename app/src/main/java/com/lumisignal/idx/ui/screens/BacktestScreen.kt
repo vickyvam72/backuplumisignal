@@ -98,7 +98,7 @@ fun BacktestScreen() {
         Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp)) {
             Text("Backtest", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
             Text(
-                "Uji strategi pada data historis${index?.period?.let { " · $it" } ?: ""}",
+                "Data historis + transaksi baru yang sudah kena TP/SL (diperbarui tiap hari)${index?.period?.let { " · $it" } ?: ""}",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
             )
         }

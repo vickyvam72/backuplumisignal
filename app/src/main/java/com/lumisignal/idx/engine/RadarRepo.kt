@@ -187,27 +187,44 @@ object RadarRepo {
     val btIndex: StateFlow<com.lumisignal.idx.data.BacktestIndex?> = _btIndex.asStateFlow()
     private val btMonths = HashMap<String, List<com.lumisignal.idx.data.BtTrade>>()
 
-    /** Months available in the backtest (cached after the first download). */
+    private var btIndexDay = ""
+
+    /**
+     * Months available in the backtest. Downloaded again once per day (and after a new radar), because
+     * finished live trades (TP or SL hit) are added to it by the server every trading day.
+     */
     suspend fun backtestIndex(): com.lumisignal.idx.data.BacktestIndex? {
-        _btIndex.value?.let { return it }
-        val text = try {
+        val stamp = Market.today() + "|" + (_day.value?.date ?: "")
+        _btIndex.value?.takeIf { btIndexDay == stamp }?.let { return it }
+        val fresh = try {
             download("backtest/index.json").also { writeCached("bt_index.json", it) }
         } catch (e: Exception) {
-            readCached("bt_index.json")
-        } ?: return null
-        return runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestIndex.serializer(), text) }.getOrNull()?.also { _btIndex.value = it }
+            null
+        }
+        val text = fresh ?: readCached("bt_index.json") ?: return _btIndex.value
+        val idx = runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestIndex.serializer(), text) }.getOrNull() ?: return _btIndex.value
+        if (fresh != null) btIndexDay = stamp
+        _btIndex.value = idx
+        return idx
     }
 
-    /** All simulated trades of one month (signal month). */
+    private fun parseMonth(text: String?): List<com.lumisignal.idx.data.BtTrade>? = text?.let { t ->
+        runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestMonthFile.serializer(), t) }.getOrNull()
+            ?.rows?.mapNotNull { com.lumisignal.idx.data.BtTrade.parse(it) }
+    }
+
+    /** All trades of one month (signal month); downloaded again when the index lists more trades. */
     suspend fun backtestMonth(month: String): List<com.lumisignal.idx.data.BtTrade>? {
-        btMonths[month]?.let { return it }
-        val text = readCached("bt_$month.json") ?: try {
-            download("backtest/$month.json").also { writeCached("bt_$month.json", it) }
+        val expected = _btIndex.value?.months?.firstOrNull { it.month == month }?.trades
+        btMonths[month]?.takeIf { expected == null || it.size == expected }?.let { return it }
+        val cached = parseMonth(readCached("bt_$month.json"))
+        if (cached != null && (expected == null || cached.size == expected)) return cached.also { btMonths[month] = it }
+        val fresh = try {
+            download("backtest/$month.json").let { txt -> parseMonth(txt)?.also { writeCached("bt_$month.json", txt) } }
         } catch (e: Exception) {
             null
-        } ?: return null
-        val f = runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestMonthFile.serializer(), text) }.getOrNull() ?: return null
-        return f.rows.mapNotNull { com.lumisignal.idx.data.BtTrade.parse(it) }.also { btMonths[month] = it }
+        }
+        return (fresh ?: cached)?.also { btMonths[month] = it }
     }
 
     /** Forgets the downloaded screening results (they are fetched again on the next screening). */

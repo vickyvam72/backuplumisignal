@@ -70,6 +70,8 @@ jobs:
           cp out/latest.json out/stocks.json out/ledger_*.json "data/$RADAR_DIR/"
           cp out/picks/*.json "data/$RADAR_DIR/picks/"
           rm -f "data/$RADAR_DIR/bars.csv.gz" "data/$RADAR_DIR/names.csv"
+          # Live trades that touched TP or SL join the monthly backtest (refreshed every trading day).
+          python tools/radar/backtest_merge.py --ledgers out --dir "data/$RADAR_DIR/backtest" --seed data/radar/backtest
           cd data
           git config user.name "lumi-ci"
           git config user.email "lumi-ci@users.noreply.github.com"

@@ -240,7 +240,6 @@ private fun JenisStep(d: RadarDay, tier: String, selected: String, onPick: (Stri
         Pill(d.tierLabel(tier), Lumi.Sky)
         Spacer(Modifier.height(12.dp))
         listOf("profit", "winrate").forEach { j ->
-            val info = d.jenis.firstOrNull { it.key == j }
             val color = if (j == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
             val n = signalCount(d, tier, j)
             GlassCard(Modifier.fillMaxWidth(), accent = color, onClick = { onPick(j) }) {
@@ -248,9 +247,9 @@ private fun JenisStep(d: RadarDay, tier: String, selected: String, onPick: (Stri
                     RadarBadge(if (j == "profit") "rocket" else "target", if (j == "profit") "#FF9F43" else "#22D3EE", j, 58.dp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(info?.label ?: j, style = MaterialTheme.typography.titleLarge, color = Lumi.Text)
+                        Text(d.jenisLabel(j), style = MaterialTheme.typography.titleLarge, color = Lumi.Text)
                         Spacer(Modifier.height(2.dp))
-                        Text(info?.desc ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        Text(RadarDay.JENIS_DESC[j] ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                     }
                 }
                 Spacer(Modifier.height(12.dp))

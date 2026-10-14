@@ -61,16 +61,15 @@ object Levels {
         val gapMin = max(c * 0.004, Market.tick(c))
         val sup = areas.filter { it.price < c - gapMin }.sortedByDescending { it.price }.take(2).toMutableList()
         val res = areas.filter { it.price > c + gapMin }.sortedBy { it.price }.take(2).toMutableList()
-        var m = 1.5
+        // No structure on a side (new low / new high): step away by the stock's daily volatility,
+        // kept between 3% and 8% of the price per step.
+        val step = atr.coerceIn(c * 0.03, c * 0.08)
         while (sup.size < 2) {
-            val p = snap(minOf(sup.lastOrNull()?.price ?: c, c) - m * atr)
-            if (p > 0) sup += SrLevel(p, 0, "atr") else break
-            m += 1.5
+            val p = snap((sup.lastOrNull()?.price ?: c) - step)
+            if (p > 0 && p < (sup.lastOrNull()?.price ?: c)) sup += SrLevel(p, 0, "atr") else break
         }
-        m = 1.5
         while (res.size < 2) {
-            res += SrLevel(snap(maxOf(res.lastOrNull()?.price ?: c, c) + m * atr), 0, "atr")
-            m += 1.5
+            res += SrLevel(snap((res.lastOrNull()?.price ?: c) + step), 0, "atr")
         }
         return SupportResistance(sup, res, atr)
     }

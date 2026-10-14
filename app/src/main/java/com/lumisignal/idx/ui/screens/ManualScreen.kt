@@ -351,7 +351,7 @@ private fun RadarCheckBody(day: RadarDay?, symbol: String, info: StockInfo, tier
     Column {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("RSI14", info.rsi14?.let { Fmt.num(it) } ?: "–", Modifier.weight(1f))
-            StatTile("Posisi 60h", info.pos60?.let { if (it < 0) "Dasar baru" else Fmt.share(it) } ?: "–", Modifier.weight(1f))
+            StatTile("Posisi 60h", info.pos60?.let { if (it < 0) "Terendah" else Fmt.share(it) } ?: "–", Modifier.weight(1f))
             StatTile("60 hari", info.gain60?.let { Fmt.pct(it * 100, decimals = 0) } ?: "–", Modifier.weight(1f))
         }
         Spacer(Modifier.height(8.dp))

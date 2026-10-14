@@ -169,7 +169,15 @@ data class RadarDay(
     fun spec(tier: String, jenis: String, id: Int): StrategySpec? = specs[tier]?.get(jenis)?.strategies?.firstOrNull { it.id == id }
     fun board(tier: String, jenis: String): Board? = boards[tier]?.get(jenis)
     fun tierLabel(tier: String): String = tiers.firstOrNull { it.key == tier }?.label ?: tier
-    fun jenisLabel(jenis: String): String = this.jenis.firstOrNull { it.key == jenis }?.label ?: jenis
+    fun jenisLabel(jenis: String): String = JENIS_LABEL[jenis] ?: jenis
+
+    companion object {
+        val JENIS_LABEL = mapOf("profit" to "Profit tinggi", "winrate" to "Winrate tinggi")
+        val JENIS_DESC = mapOf(
+            "profit" to "Target lebar dari volatilitas atau resisten terdekat. Mengejar kenaikan besar, sesekali kena stop loss.",
+            "winrate" to "Target kecil minimal 3% yang lebih sering tercapai. Untung tipis tapi konsisten.",
+        )
+    }
 
     /** Daily bars shipped with the radar for a picked stock. */
     fun barsOf(ticker: String): List<Bar> = bars[ticker].orEmpty().mapNotNull { a ->

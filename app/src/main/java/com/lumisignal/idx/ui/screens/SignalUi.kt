@@ -101,7 +101,17 @@ fun ShareIcon(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 34.dp) {
             .border(1.dp, Lumi.Sky.copy(alpha = 0.35f), androidx.compose.foundation.shape.CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(androidx.compose.material.icons.Icons.Filled.Share, contentDescription = "Bagikan", tint = Lumi.Sky, modifier = Modifier.size(size * 0.5f))
+        // Share glyph: three nodes joined by two lines.
+        androidx.compose.foundation.Canvas(Modifier.size(size * 0.46f)) {
+            val w = this.size.width
+            val r = w * 0.14f
+            val a = androidx.compose.ui.geometry.Offset(w * 0.78f, w * 0.18f)
+            val b = androidx.compose.ui.geometry.Offset(w * 0.22f, w * 0.5f)
+            val c = androidx.compose.ui.geometry.Offset(w * 0.78f, w * 0.82f)
+            drawLine(Lumi.Sky, b, a, strokeWidth = w * 0.09f)
+            drawLine(Lumi.Sky, b, c, strokeWidth = w * 0.09f)
+            listOf(a, b, c).forEach { drawCircle(Lumi.Sky, r, it) }
+        }
     }
 }
 

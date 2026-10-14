@@ -30,8 +30,11 @@ import java.io.File
 /** Renders the main screens with a recorded radar so the layout can be reviewed (CI only). */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w400dp-h3000dp-xxhdpi")
+@Config(sdk = [34], qualifiers = "w400dp-h3000dp-xxhdpi", application = ScreensTest.TestApp::class)
 class ScreensTest {
+    /** Plain application: no WorkManager scheduling under Robolectric. */
+    class TestApp : android.app.Application()
+
     @get:Rule
     val compose = createComposeRule()
 

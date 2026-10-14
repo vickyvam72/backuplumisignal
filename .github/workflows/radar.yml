@@ -40,9 +40,24 @@ jobs:
           git clone --depth 1 --branch market-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data
           mkdir -p "data/$RADAR_DIR/picks"
 
+      - name: Restore last bars (fallback for stocks that fail to load)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: radar-bars-${{ env.RADAR_DIR }}-${{ github.run_id }}
+          restore-keys: radar-bars-${{ env.RADAR_DIR }}-
+
       - name: Fetch daily bars (TradingView)
         run: |
-          python tools/radar/fetch_tv.py --bars bars.csv.gz --names names.csv --cache "data/$RADAR_DIR/bars.csv.gz"
+          mkdir -p cache
+          python tools/radar/fetch_tv.py --bars bars.csv.gz --names names.csv --cache cache/bars.csv.gz
+          cp bars.csv.gz cache/bars.csv.gz
+
+      - name: Save bars cache
+        uses: actions/cache/save@v4
+        with:
+          path: cache
+          key: radar-bars-${{ env.RADAR_DIR }}-${{ github.run_id }}
 
       - name: Run radar
         run: |
@@ -52,7 +67,7 @@ jobs:
         run: |
           cp out/latest.json out/stocks.json out/ledger_*.json "data/$RADAR_DIR/"
           cp out/picks/*.json "data/$RADAR_DIR/picks/"
-          cp bars.csv.gz names.csv "data/$RADAR_DIR/"
+          rm -f "data/$RADAR_DIR/bars.csv.gz" "data/$RADAR_DIR/names.csv"
           cd data
           git config user.name "lumi-ci"
           git config user.email "lumi-ci@users.noreply.github.com"

@@ -177,6 +177,12 @@ private fun BuyDateHero(d: RadarDay) {
             )
             Text("Dari closing ${Market.prettyDate(d.date, false)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
         }
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            ShareIcon({ com.lumisignal.idx.share.ShareCards.shareDay(ctx, d, UiConfig.FIXED_TIER) }, 42.dp)
+            Spacer(Modifier.height(3.dp))
+            Text("Bagikan", style = MaterialTheme.typography.labelSmall, color = Lumi.Sky)
+        }
     }
 }
 

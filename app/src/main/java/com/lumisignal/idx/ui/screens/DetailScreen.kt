@@ -65,6 +65,7 @@ import java.util.Locale
 /** Detail for a saved signal (strategy history or portfolio). */
 @Composable
 fun SignalDetailScreen(id: String, onBack: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val items by Graph.history.items.collectAsStateWithLifecycle()
     val sig = items.firstOrNull { it.id == id }
     var portoDialog by remember { mutableStateOf(false) }
@@ -96,6 +97,7 @@ fun SignalDetailScreen(id: String, onBack: () -> Unit) {
         headerTag = if (sig.source == SOURCE_PORTO) "PORTO" else "RIWAYAT STRATEGI",
         onBack = onBack,
         statusCard = { TrackingCard(sig) },
+        onShare = { com.lumisignal.idx.share.ShareCards.shareSignal(ctx, sig) },
         actions = {
             if (sig.source == SOURCE_STRATEGY) {
                 if (porto == null) {
@@ -186,7 +188,9 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
     val plan = sig.eval.plan
     val sr = remember(chartBars.size, sig.refDate) { com.lumisignal.idx.engine.Levels.of(chartBars.filter { it.date <= sig.refDate }) }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(sig.symbol, subtitle = sig.name.ifBlank { tag.name }, onBack = onBack)
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        ScreenHeader(sig.symbol, subtitle = sig.name.ifBlank { tag.name }, onBack = onBack,
+            trailing = { ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(ctx, sig) }, 40.dp) })
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
             GlassCard(Modifier.fillMaxWidth(), accent = accent) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,6 +287,7 @@ fun AnalysisDetail(
     onBack: () -> Unit,
     statusCard: (@Composable () -> Unit)? = null,
     actions: (@Composable () -> Unit)? = null,
+    onShare: (() -> Unit)? = null,
 ) {
     val accent = Lumi.strategyColor(strategy.id)
     val bandarChecks = eval.checks.filter { it.kind == "bandar" }
@@ -296,7 +301,8 @@ fun AnalysisDetail(
     }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(symbol, subtitle = name.ifBlank { strategy.title }, onBack = onBack)
+        ScreenHeader(symbol, subtitle = name.ifBlank { strategy.title }, onBack = onBack,
+            trailing = onShare?.let { f -> { ShareIcon(f, 40.dp) } })
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
             // ---- hero
             GlassCard(Modifier.fillMaxWidth(), accent = accent) {

@@ -574,6 +574,9 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
                 Text("BELI ≤", style = MaterialTheme.typography.labelSmall, color = Lumi.Blue)
                 Text(Fmt.price(p.entryHigh), style = NumberStyle.copy(fontSize = 16.sp), color = Lumi.Text)
             }
+            Spacer(Modifier.width(10.dp))
+            val shareCtx = LocalContext.current
+            ShareIcon({ com.lumisignal.idx.share.ShareCards.sharePick(shareCtx, d, jenis, p, sid) }, 34.dp)
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

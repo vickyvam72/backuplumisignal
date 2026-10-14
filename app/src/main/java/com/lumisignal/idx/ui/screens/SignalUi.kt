@@ -93,8 +93,21 @@ fun MiniLevel(label: String, value: String, color: Color, modifier: Modifier = M
 }
 
 /** Compact row for the history lists. */
+/** Round share button (opens the Android share sheet with a picture report). */
+@Composable
+fun ShareIcon(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 34.dp) {
+    Box(
+        Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape).background(Lumi.Sky.copy(alpha = 0.12f))
+            .border(1.dp, Lumi.Sky.copy(alpha = 0.35f), androidx.compose.foundation.shape.CircleShape).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(androidx.compose.material.icons.Icons.Filled.Share, contentDescription = "Bagikan", tint = Lumi.Sky, modifier = Modifier.size(size * 0.5f))
+    }
+}
+
 @Composable
 fun SignalRow(sig: Signal, onOpen: () -> Unit) {
+    val shareCtx = androidx.compose.ui.platform.LocalContext.current
     val plan = sig.eval.plan
     GlassCard(Modifier.fillMaxWidth(), padding = 14.dp, onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -111,6 +124,8 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
+            ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 32.dp)
+            Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
                 StatusBadge(sig.status)
                 val pnl = sig.pnlPct

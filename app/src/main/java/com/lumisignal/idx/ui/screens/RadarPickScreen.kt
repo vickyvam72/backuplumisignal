@@ -93,7 +93,9 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
     val porto = remember(items, d.date) { RadarPorto.find(d.date, tier, jenis, sid, ticker, combined) }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(ticker, subtitle = pick.name.ifBlank { meta?.name ?: "" }, onBack = onBack)
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        ScreenHeader(ticker, subtitle = pick.name.ifBlank { meta?.name ?: "" }, onBack = onBack,
+            trailing = { ShareIcon({ com.lumisignal.idx.share.ShareCards.sharePick(ctx, d, jenis, pick, sid) }, 40.dp) })
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
             GlassCard(Modifier.fillMaxWidth(), accent = accent) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

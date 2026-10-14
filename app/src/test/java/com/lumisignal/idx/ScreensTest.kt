@@ -89,5 +89,16 @@ class ScreensTest {
             compose.mainClock.advanceTimeBy(1500)
             compose.onRoot().captureRoboImage("build/screens/${names[i]}.png")
         }
+        // Share cards (pictures sent through the share sheet).
+        val share = com.lumisignal.idx.share.ShareCards
+        val top = day.board("250jt", "profit")?.top5?.firstOrNull { it.valid }
+            ?: day.boards.values.flatMap { it.values }.flatMap { it.top5 }.first { it.valid }
+        fun save(name: String, b: android.graphics.Bitmap) =
+            File("build/screens/$name.png").outputStream().use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        save("11-share-sinyal", share.pickBitmap(ctx, day, "profit", top, top.sid ?: 0))
+        save("12-share-semua", share.dayBitmap(ctx, day, "250jt"))
+        val done = porto.copy(status = com.lumisignal.idx.data.SignalStatus.TP, entryPrice = p.entryHigh, entryDate = day.date,
+            exitPrice = p.tp, exitDate = day.date)
+        save("13-share-riwayat", share.signalBitmap(ctx, done))
     }
 }

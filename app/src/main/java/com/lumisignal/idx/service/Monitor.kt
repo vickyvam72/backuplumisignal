@@ -16,6 +16,7 @@ import com.lumisignal.idx.data.LivePoint
 import com.lumisignal.idx.data.Signal
 import com.lumisignal.idx.engine.Market
 import com.lumisignal.idx.engine.RadarRepo
+import com.lumisignal.idx.engine.RadarPorto
 import com.lumisignal.idx.engine.Tracker
 import java.util.concurrent.TimeUnit
 
@@ -111,7 +112,10 @@ object Monitor {
             tracked = tracked.copy(lastUpdate = System.currentTimeMillis())
             if (tracked.status != sig.status || tracked.exitPrice != sig.exitPrice) {
                 changed++
-                if (tracked.status != sig.status) Notifier.statusChanged(ctx, tracked)
+                // Portfolio positions notify every change; screening results only when TP or SL is hit.
+                if (tracked.status != sig.status &&
+                    (sig.source == com.lumisignal.idx.data.SOURCE_PORTO || tracked.status == com.lumisignal.idx.data.SignalStatus.TP || tracked.status == com.lumisignal.idx.data.SignalStatus.SL)
+                ) Notifier.statusChanged(ctx, tracked)
             }
             updated += tracked
         }
@@ -129,6 +133,7 @@ object Monitor {
             val now = Market.now()
             if (!RadarRepo.isStale(now)) return
             val d = RadarRepo.refresh()
+            RadarPorto.saveScreening(d, RadarRepo.tier.value, RadarRepo.jenis)
             if (d.date >= RadarRepo.expectedDate(now) && RadarRepo.notifiedDate != d.date) {
                 RadarRepo.notifiedDate = d.date
                 val tier = RadarRepo.tier.value

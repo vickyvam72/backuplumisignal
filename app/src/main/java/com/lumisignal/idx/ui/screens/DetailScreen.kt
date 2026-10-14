@@ -80,7 +80,7 @@ fun SignalDetailScreen(id: String, onBack: () -> Unit) {
     val chartBars = (sig.bars + sig.trackBars).associateBy { it.date }.values.sortedBy { it.date }
 
     if (sig.radar != null) {
-        RadarSignalDetail(sig, chartBars, onBack, onDelete = { deleteDialog = true })
+        RadarSignalDetail(sig, chartBars, onBack, onDelete = { deleteDialog = true }, porto = porto, onPorto = { portoDialog = true })
     } else AnalysisDetail(
         symbol = sig.symbol,
         name = sig.name,
@@ -170,7 +170,7 @@ private fun TrackingCard(sig: Signal) {
 
 /** Portfolio position taken from the Radar Besok screening. */
 @Composable
-private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> Unit, onDelete: () -> Unit) {
+private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> Unit, onDelete: () -> Unit, porto: Signal?, onPorto: () -> Unit) {
     val tag = sig.radar ?: return
     val accent = com.lumisignal.idx.ui.components.hexColor(tag.color)
     val plan = sig.eval.plan
@@ -184,7 +184,7 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "PORTO · " + when (tag.jenis) {
+                            (if (sig.source == SOURCE_PORTO) "PORTO · " else "RIWAYAT STRATEGI · ") + when (tag.jenis) {
                                 "profit" -> "PROFIT TINGGI"
                                 "winrate" -> "WINRATE TINGGI"
                                 else -> "ANALISA MANUAL"
@@ -244,7 +244,12 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                 }
             }
             Spacer(Modifier.height(12.dp))
-            GhostButton("Hapus dari Porto", onDelete, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
+            when {
+                sig.source == SOURCE_PORTO ->
+                    GhostButton("Hapus dari Porto", onDelete, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
+                porto == null -> GradientButton("Masukkan Porto", onPorto, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
+                else -> GhostButton("Sudah ada di Porto", {}, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
+            }
             Spacer(Modifier.height(28.dp))
         }
     }

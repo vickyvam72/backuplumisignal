@@ -6,6 +6,7 @@ import com.lumisignal.idx.data.RadarDay
 import com.lumisignal.idx.data.RadarPick
 import com.lumisignal.idx.data.RadarTag
 import com.lumisignal.idx.data.SOURCE_PORTO
+import com.lumisignal.idx.data.SOURCE_STRATEGY
 import com.lumisignal.idx.data.Signal
 import com.lumisignal.idx.data.SignalStatus
 import com.lumisignal.idx.data.StrategyEval
@@ -51,7 +52,8 @@ object RadarPorto {
         return (if (t.isNotBlank()) "$t. " else "") + "Dihitung ulang dari harga beli sebenarnya, dibulatkan ke bawah sesuai fraksi harga."
     }
 
-    fun add(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick, combined: Boolean, customEntry: Double?): Signal {
+    /** One radar pick as a tracked signal: STRATEGY (screening history) or PORTO (user's position). */
+    private fun build(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick, combined: Boolean, source: String, customEntry: Double?): Signal {
         val meta = day.strategy(sid)
         val spec = day.spec(tier, jenis, sid)
         val plan = plan(day, tier, jenis, sid, pick)
@@ -60,9 +62,9 @@ object RadarPorto {
             maxOf(day.date, if (Market.sessionInProgress()) previousIso(today) else today)
         } else null
         val k = key(day.date, tier, jenis, sid, pick.ticker, combined)
-        val sig = Signal(
-            id = "P-$k-${System.currentTimeMillis()}",
-            source = SOURCE_PORTO,
+        return Signal(
+            id = if (source == SOURCE_PORTO) "P-$k-${System.currentTimeMillis()}" else k,
+            source = source,
             symbol = pick.ticker,
             name = pick.name,
             strategyId = sid,
@@ -77,7 +79,7 @@ object RadarPorto {
                 plan = plan,
             ),
             bars = day.barsOf(pick.ticker),
-            linkedId = k,
+            linkedId = if (source == SOURCE_PORTO) k else null,
             customEntry = customEntry,
             startDate = start,
             status = if (customEntry != null) SignalStatus.ACTIVE else SignalStatus.WAITING,
@@ -88,9 +90,34 @@ object RadarPorto {
                 why = pick.why, exitText = spec?.exitText ?: "", regText = spec?.regText ?: "", desc = meta?.desc ?: "",
             ),
         )
-        val tracked = Tracker.track(sig)
+    }
+
+    fun add(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick, combined: Boolean, customEntry: Double?): Signal {
+        val tracked = Tracker.track(build(day, tier, jenis, sid, pick, combined, SOURCE_PORTO, customEntry))
         Graph.history.upsert(listOf(tracked))
         return tracked
+    }
+
+    /**
+     * Saves every pick of one tier + signal type (each strategy and the combined top 5) into the
+     * strategy history, where they are audited with live prices. Picks already saved keep their state.
+     * Returns how many were new.
+     */
+    fun saveScreening(day: RadarDay, tier: String, jenis: String): Int {
+        val board = day.board(tier, jenis) ?: return 0
+        val have = Graph.history.items.value.mapTo(HashSet()) { it.id }
+        val fresh = mutableListOf<Signal>()
+        for (bs in board.strategies) for (p in bs.picks) {
+            if (!p.valid || key(day.date, tier, jenis, bs.id, p.ticker, false) in have) continue
+            fresh += Tracker.track(build(day, tier, jenis, bs.id, p, false, SOURCE_STRATEGY, null))
+        }
+        for (p in board.top5) {
+            val sid = p.sid ?: continue
+            if (!p.valid || key(day.date, tier, jenis, sid, p.ticker, true) in have) continue
+            fresh += Tracker.track(build(day, tier, jenis, sid, p, true, SOURCE_STRATEGY, null))
+        }
+        if (fresh.isNotEmpty()) Graph.history.upsert(fresh)
+        return fresh.size
     }
 
     /** Portfolio entry from a manual stock check (plan from support/resistance). */

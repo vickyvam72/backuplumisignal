@@ -57,6 +57,15 @@ class HistoryStore(context: Context) {
         _items.value = list
     }
 
+    /** Removes every signal matching [predicate]; returns how many were removed. */
+    fun removeWhere(predicate: (Signal) -> Boolean): Int = synchronized(lock) {
+        val list = _items.value.filterNot(predicate)
+        val n = _items.value.size - list.size
+        persist(list)
+        _items.value = list
+        n
+    }
+
     fun portoFor(signalId: String): Signal? =
         _items.value.firstOrNull { it.source == SOURCE_PORTO && it.linkedId == signalId }
 }

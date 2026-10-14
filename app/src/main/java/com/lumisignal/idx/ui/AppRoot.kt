@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -102,6 +103,16 @@ private fun MainNav() {
     // Whenever the app comes to the foreground, refresh open signals (throttled) — no manual button.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         scope.launch { Monitor.refreshIfStale(ctx) }
+    }
+    // Near-realtime audit while the app is open: prices every minute during trading hours.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                kotlinx.coroutines.delay(60_000)
+                if (com.lumisignal.idx.engine.Market.marketOpen()) Monitor.refreshIfStale(ctx, 55_000)
+            }
+        }
     }
     NavHost(nav, startDestination = "tabs", modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         composable("tabs") { TabsScreen(nav) }

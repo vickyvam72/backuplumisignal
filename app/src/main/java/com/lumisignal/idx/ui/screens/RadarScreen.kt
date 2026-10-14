@@ -2,6 +2,8 @@ package com.lumisignal.idx.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
+import com.lumisignal.idx.service.Monitor
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Brush
 import com.lumisignal.idx.ui.components.ProgressBar
@@ -148,7 +150,14 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
             }
             stage == STAGE_TIER || stage == STAGE_SCAN -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
             stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; RadarRepo.jenis = it; stage = STAGE_RESULT }
-            else -> ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
+            else -> {
+                val ctx = LocalContext.current
+                // Every shown result goes into the strategy history and is audited with live prices.
+                LaunchedEffect(d.date, tier, jenis) {
+                    if (RadarPorto.saveScreening(d, tier, jenis) > 0) Monitor.refreshIfStale(ctx, 0)
+                }
+                ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
+            }
         }
     }
 }

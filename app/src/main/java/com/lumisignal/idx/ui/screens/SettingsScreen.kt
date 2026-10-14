@@ -22,6 +22,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.material.icons.filled.Delete
+import com.lumisignal.idx.data.SOURCE_PORTO
+import com.lumisignal.idx.data.SOURCE_STRATEGY
+import com.lumisignal.idx.engine.RadarRepo
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +51,7 @@ import java.util.Locale
 fun SettingsScreen() {
     val ctx = LocalContext.current
     var logoutDialog by remember { mutableStateOf(false) }
+    var resetDialog by remember { mutableIntStateOf(0) }
     var notif by remember { mutableStateOf(Perms.notifications(ctx)) }
     var bg by remember { mutableStateOf(Perms.background(ctx)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -101,7 +107,7 @@ fun SettingsScreen() {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Harga posisi Porto diperiksa otomatis ±15 menit sekali selama bursa buka, memakai high & low harian asli dari Stockbit. Notifikasi juga muncul saat Radar Besok terbit.",
+                "Saham di Riwayat Strategi dan Porto diaudit dengan high & low harian asli dari Stockbit: tiap menit saat aplikasi terbuka di jam bursa, ±15 menit sekali di latar belakang. Notifikasi muncul saat Radar Besok terbit dan saat harga menyentuh entry, TP, atau SL.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
             if (!notif || !bg) {
@@ -113,6 +119,21 @@ fun SettingsScreen() {
         }
         Spacer(Modifier.height(16.dp))
 
+        SectionHeader("Reset data")
+        Spacer(Modifier.height(8.dp))
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text("Hapus hasil screening & Riwayat Strategi", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+            Text("Semua saham hasil screening dan pemantauannya dihapus. Porto tidak ikut terhapus.", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+            Spacer(Modifier.height(8.dp))
+            GhostButton("Reset riwayat strategi", { resetDialog = 1 }, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Amber)
+            Spacer(Modifier.height(14.dp))
+            Text("Hapus Riwayat Portofolio", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+            Text("Semua saham yang kamu masukkan Porto beserta hasilnya dihapus. Riwayat strategi tidak ikut terhapus.", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+            Spacer(Modifier.height(8.dp))
+            GhostButton("Reset riwayat portofolio", { resetDialog = 2 }, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
+        }
+        Spacer(Modifier.height(16.dp))
+
         SectionHeader("Cara kerja Lumi")
         Spacer(Modifier.height(8.dp))
         GlassCard(Modifier.fillMaxWidth()) {
@@ -120,7 +141,7 @@ fun SettingsScreen() {
             Bullet("Dua jenis sinyal: Profit tinggi (target lebar dari volatilitas atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Tiap tingkat likuiditas punya 5 strateginya sendiri, plus Top 5 gabungan.")
             Bullet("Beli di sesi berikutnya: di harga pembukaan bila ≤ closing +1%, kalau dibuka lebih tinggi antre di closing +1%. Tidak terisi di sesi itu = batal. Saham yang masih dipegang tidak direkomendasikan lagi.")
             Bullet("TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah) dan dihitung dari harga beli sebenarnya. Kalau belum kena TP/SL, posisi dijual di closing hari terakhir masa hold.")
-            Bullet("Riwayat Strategi berisi hasil nyata setiap rekomendasi radar; winrate = transaksi untung dibagi transaksi selesai, akumulasi P/L = jumlah P/L real. Porto dipantau dengan harga Stockbit milikmu.")
+            Bullet("Setiap hasil screening yang kamu buka masuk Riwayat Strategi, dan Porto berisi saham pilihanmu. Keduanya diaudit dengan harga Stockbit: tiap menit saat aplikasi terbuka di jam bursa, dan ±15 menit sekali di latar belakang. Winrate = transaksi untung dibagi transaksi selesai; akumulasi P/L = jumlah P/L real.")
         }
         Spacer(Modifier.height(16.dp))
 
@@ -135,6 +156,35 @@ fun SettingsScreen() {
         Spacer(Modifier.height(12.dp))
         Text("Lumi Signal IDX v${BuildConfigInfo.versionName(ctx)}", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
         Spacer(Modifier.height(28.dp))
+    }
+
+    if (resetDialog != 0) {
+        val strategy = resetDialog == 1
+        AlertDialog(
+            onDismissRequest = { resetDialog = 0 },
+            containerColor = Lumi.Surface,
+            title = { Text(if (strategy) "Reset riwayat strategi?" else "Reset riwayat portofolio?", color = Lumi.Text) },
+            text = {
+                Text(
+                    if (strategy) "Semua hasil screening dan Riwayat Strategi akan dihapus permanen. Screening berikutnya akan mencatat dari awal lagi."
+                    else "Semua posisi Porto dan hasilnya akan dihapus permanen, termasuk winrate porto.",
+                    color = Lumi.TextDim,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (strategy) {
+                        Graph.history.removeWhere { it.source == SOURCE_STRATEGY }
+                        RadarRepo.clearLocal()
+                    } else {
+                        Graph.history.removeWhere { it.source == SOURCE_PORTO }
+                    }
+                    resetDialog = 0
+                    android.widget.Toast.makeText(ctx, if (strategy) "Riwayat strategi dihapus" else "Riwayat portofolio dihapus", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text("Hapus", color = Lumi.Red) }
+            },
+            dismissButton = { TextButton(onClick = { resetDialog = 0 }) { Text("Batal", color = Lumi.TextDim) } },
+        )
     }
 
     if (logoutDialog) {

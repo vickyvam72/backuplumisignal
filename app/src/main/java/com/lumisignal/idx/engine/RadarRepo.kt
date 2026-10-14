@@ -182,6 +182,17 @@ object RadarRepo {
         }
     }
 
+    /** Forgets the downloaded screening results (they are fetched again on the next screening). */
+    fun clearLocal() {
+        listOf("latest.json", "stocks.json").forEach { File(dir, it).delete() }
+        TIER_KEYS.forEach { File(dir, "ledger_$it.json").delete() }
+        _day.value = null
+        _stocks.value = null
+        _ledgers.value = emptyMap()
+        _state.value = RadarState()
+        notifiedDate = ""
+    }
+
     /** Closing date the newest radar should have now (weekends skipped; exchange holidays are not known). */
     fun expectedDate(now: java.time.ZonedDateTime = Market.now()): String {
         var d = now.toLocalDate()

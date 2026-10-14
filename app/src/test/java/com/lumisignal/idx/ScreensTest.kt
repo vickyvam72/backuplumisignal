@@ -70,7 +70,7 @@ class ScreensTest {
                         1 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> })
                         2 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_TIER)
                         3 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_JENIS)
-                        4 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_RESULT, initialJenis = "winrate")
+                        4 -> RadarScreen(onBack = {}, onOpenPick = { _, _, _, _, _ -> }, initialStage = STAGE_RESULT, initialJenis = "profit")
                         5 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
                         6 -> HistoryScreen(onOpenSignal = {})
                         7 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)

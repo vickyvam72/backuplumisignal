@@ -1,1 +1,1 @@
-fetched_wib=2026-10-14T00:06:44.561075 rows=844 cols=70
+fetched_wib=2026-10-14T22:11:01.098432 rows=844 cols=40

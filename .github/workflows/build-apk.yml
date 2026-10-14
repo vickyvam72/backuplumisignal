@@ -41,6 +41,13 @@ jobs:
           set -o pipefail
           gradle testReleaseUnitTest assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
 
+      - name: Screenshot check (dev branch)
+        if: success() && github.ref != 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest --tests 'com.lumisignal.idx.ScreensTest' -Dlumi.screens=1 --no-daemon --stacktrace 2>&1 | tail -c 200000 > screens.log
+
       - name: Rename APK
         if: success()
         run: |
@@ -73,6 +80,9 @@ jobs:
           STATUS="${{ job.status }}"
           [ -f build.log ] || echo "no build log (status: $STATUS)" > build.log
           tail -c 400000 build.log > /tmp/build.log
+          mkdir -p /tmp/screens
+          cp app/build/screens/*.png /tmp/screens/ 2>/dev/null || true
+          cp screens.log /tmp/screens/ 2>/dev/null || true
           echo "run=${{ github.run_number }} sha=${{ github.sha }} status=$STATUS" > /tmp/status.txt
           git config user.name "lumi-ci"
           git config user.email "lumi-ci@users.noreply.github.com"
@@ -81,6 +91,7 @@ jobs:
           rm -rf ./* .github 2>/dev/null || true
           cp /tmp/build.log build.log
           cp /tmp/status.txt status.txt
-          git add build.log status.txt
+          cp -r /tmp/screens screens
+          git add build.log status.txt screens
           git commit -m "CI log run ${{ github.run_number }} ($STATUS)" > /dev/null
           git push -f origin HEAD:ci-logs

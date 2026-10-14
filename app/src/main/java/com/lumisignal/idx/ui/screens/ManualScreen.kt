@@ -154,7 +154,8 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
     var error by remember(symbol) { mutableStateOf<String?>(null) }
     var attempt by remember(symbol) { mutableIntStateOf(0) }
     var dialog by remember(symbol) { mutableStateOf(false) }
-    val day by RadarRepo.day.collectAsStateWithLifecycle()
+    val dayState by RadarRepo.day.collectAsStateWithLifecycle()
+    val day = dayState
     val tier by RadarRepo.tier.collectAsStateWithLifecycle()
     val items by Graph.history.items.collectAsStateWithLifecycle()
 

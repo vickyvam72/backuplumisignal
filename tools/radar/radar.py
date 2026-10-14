@@ -238,7 +238,7 @@ def regime_note(c, reg, d):
     if not guard:
         return False, f"Rem pasar aktif: saham di atas MA20 turun {fmt_num(abs(chg) * 100, 0)} poin dalam 10 hari"
     if reg == 'ret' and not (r5 > -.03):
-        return False, f"Pasar turun {fmt_pct(abs(r5), 1, False)} dalam 5 hari (batas 3%)"
+        return False, f"Pasar turun {fmt_pct(abs(r5), 2, False)} dalam 5 hari (batas 3,00%)"
     if reg == 'br30' and not (b >= .30):
         return False, f"Hanya {fmt_pct(b, 0, False)} saham di atas MA20 (minimal 30%)"
     if reg == 'br50' and not (b >= .50):

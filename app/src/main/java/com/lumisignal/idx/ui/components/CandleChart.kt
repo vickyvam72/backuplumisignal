@@ -138,9 +138,19 @@ fun CandleChart(
 
         // plan lines
         if (plan != null) {
-            planLine(measurer, py(plan.tp), chartW, Lumi.Green, "TP ${Fmt.price(plan.tp)}")
-            planLine(measurer, py(plan.entryHigh), chartW, Lumi.Blue, "BUY ${Fmt.price(plan.entryHigh)}")
-            planLine(measurer, py(plan.stopLoss), chartW, Lumi.Red, "SL ${Fmt.price(plan.stopLoss)}")
+            val lines = listOf(
+                Triple(py(plan.tp), Lumi.Green, "TP ${Fmt.price(plan.tp)}"),
+                Triple(py(plan.entryHigh), Lumi.Blue, "BUY ${Fmt.price(plan.entryHigh)}"),
+                Triple(py(plan.stopLoss), Lumi.Red, "SL ${Fmt.price(plan.stopLoss)}"),
+            )
+            lines.forEach { (y, c, _) -> planLine(y, chartW, c) }
+            // Labels never overlap: push them apart when the levels are close together.
+            val gap = 17.dp.toPx()
+            val ys = lines.map { it.first }.toMutableList()
+            for (i in 1 until ys.size) if (ys[i] - ys[i - 1] < gap) ys[i] = ys[i - 1] + gap
+            val overflow = ys.last() - (priceH - gap / 2)
+            if (overflow > 0) for (i in ys.indices) ys[i] -= overflow
+            lines.forEachIndexed { i, (_, c, text) -> planLabel(measurer, ys[i], chartW, c, text) }
         }
 
         // dates
@@ -164,12 +174,15 @@ private fun DrawScope.label(measurer: TextMeasurer, text: String, at: Offset, co
     )
 }
 
-@OptIn(ExperimentalTextApi::class)
-private fun DrawScope.planLine(measurer: TextMeasurer, y: Float, chartW: Float, color: Color, text: String) {
+private fun DrawScope.planLine(y: Float, chartW: Float, color: Color) {
     drawLine(
         color.copy(alpha = 0.9f), Offset(0f, y), Offset(chartW, y), strokeWidth = 1.6f,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 7f)),
     )
+}
+
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.planLabel(measurer: TextMeasurer, y: Float, chartW: Float, color: Color, text: String) {
     val layout = measurer.measure(text, TextStyle(fontFamily = GroteskFamily, fontSize = 9.sp, fontWeight = FontWeight.Bold))
     val w = layout.size.width + 10.dp.toPx()
     val h = layout.size.height + 4.dp.toPx()

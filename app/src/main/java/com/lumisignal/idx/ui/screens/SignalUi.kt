@@ -105,7 +105,6 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(sig.symbol, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
                     Spacer(Modifier.width(8.dp))
-                    Text(Market.shortDate(sig.refDate), style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
                 }
                 Text(
                     sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
@@ -121,8 +120,18 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 }
             }
         }
+        Spacer(Modifier.height(10.dp))
+        TradeTimeline(
+            signal = sig.refDate, buy = sig.entryDate, sell = sig.exitDate, hold = sig.holdDays,
+            pending = when {
+                sig.status == SignalStatus.CANCELLED -> "batal"
+                sig.entryDate == null -> "menunggu"
+                sig.isOpen -> "masih dipegang"
+                else -> null
+            },
+        )
         if (plan != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MiniLevel("ENTRY", Fmt.price(sig.entryPrice ?: plan.entryHigh), Lumi.Blue, Modifier.weight(1f))
                 MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
@@ -174,4 +183,37 @@ fun PortoDialog(sig: Signal, onDismiss: () -> Unit, onConfirm: (Double?) -> Unit
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal", color = Lumi.TextDim) } },
     )
+}
+
+
+/**
+ * Signal → buy → sell dates of one trade with the number of trading sessions held (entry day included).
+ * [pending] replaces a missing buy/sell date ("menunggu", "masih dipegang", "batal").
+ */
+@Composable
+fun TradeTimeline(signal: String, buy: String?, sell: String?, hold: Int?, pending: String? = null, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Lumi.Bg.copy(alpha = 0.5f))
+            .border(1.dp, Lumi.Border.copy(alpha = 0.7f), RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 9.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TimelineCell("SINYAL", Market.shortDate(signal), Lumi.Sky, Modifier.weight(1f))
+            Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
+            TimelineCell("BELI", buy?.let { Market.shortDate(it) } ?: (if (pending == "batal") "tidak terbeli" else pending ?: "–"), Lumi.Blue, Modifier.weight(1f))
+            Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
+            TimelineCell("JUAL", sell?.let { Market.shortDate(it) } ?: (if (buy != null) pending ?: "–" else "–"), Lumi.Green, Modifier.weight(1f))
+            Column(Modifier.width(62.dp), horizontalAlignment = Alignment.End) {
+                Text("HOLD", style = MaterialTheme.typography.labelSmall, color = Lumi.Amber)
+                Text(hold?.let { "$it hari" } ?: "–", style = NumberStyle.copy(fontSize = 13.sp), color = Lumi.Text)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineCell(label: String, value: String, color: Color, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = color)
+        Text(value, style = MaterialTheme.typography.labelMedium, color = Lumi.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }

@@ -272,3 +272,32 @@ data class RadarTag(
     val regText: String = "",
     val desc: String = "",
 )
+
+
+@Serializable
+data class BacktestMonthInfo(val month: String, val label: String = "", val start: String = "", val end: String = "", val trades: Int = 0)
+
+@Serializable
+data class BacktestIndex(val period: String = "", val months: List<BacktestMonthInfo> = emptyList())
+
+@Serializable
+data class BacktestMonthFile(val month: String = "", val rows: List<JsonArray> = emptyList())
+
+/** One simulated trade: signal at the close, buy next session, sell at TP, SL or the end of the hold. */
+data class BtTrade(
+    val jenis: String, val tier: String, val combined: Boolean, val sid: Int, val ticker: String,
+    val signal: String, val buy: String, val sell: String, val close: Double, val entry: Double,
+    val tp: Double, val sl: Double, val pnl: Double, val hold: Int, val exit: String,
+) {
+    companion object {
+        fun parse(a: JsonArray): BtTrade? = try {
+            BtTrade(
+                a[0].asStr()!!, a[1].asStr()!!, (a[2].asNum() ?: 0.0) > 0, a[3].asNum()!!.toInt(), a[4].asStr()!!,
+                a[5].asStr()!!, a[6].asStr()!!, a[7].asStr()!!, a[8].asNum()!!, a[9].asNum()!!,
+                a[10].asNum()!!, a[11].asNum()!!, a[12].asNum()!!, a[13].asNum()!!.toInt(), a[14].asStr()!!,
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+}

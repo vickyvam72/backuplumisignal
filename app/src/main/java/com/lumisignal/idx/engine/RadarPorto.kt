@@ -103,6 +103,10 @@ object RadarPorto {
      * strategy history, where they are audited with live prices. Picks already saved keep their state.
      * Returns how many were new.
      */
+    /** Every pick of every tier and signal type of a radar into the strategy history. */
+    fun saveAll(day: RadarDay): Int =
+        RadarRepo.TIER_KEYS.sumOf { t -> listOf("profit", "winrate").sumOf { j -> saveScreening(day, t, j) } }
+
     fun saveScreening(day: RadarDay, tier: String, jenis: String): Int {
         val board = day.board(tier, jenis) ?: return 0
         val have = Graph.history.items.value.mapTo(HashSet()) { it.id }

@@ -74,14 +74,16 @@ class ScreensTest {
                         5 -> RadarPickScreen(tier, "winrate", sid, p.ticker, false, onBack = {}, onOpenSignal = {})
                         6 -> HistoryScreen(onOpenSignal = {})
                         7 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)
-                        else -> SignalDetailScreen(porto.id, onBack = {})
+                        8 -> SignalDetailScreen(porto.id, onBack = {})
+                        else -> com.lumisignal.idx.ui.screens.BacktestScreen()
                     }
                 }
             }
         }
-        val names = listOf("1-home", "2-scan", "3-tingkat", "4-jenis", "5-hasil", "6-pick", "7-riwayat", "8-cek-saham", "9-porto")
+        val names = listOf("1-home", "2-scan", "3-tingkat", "4-jenis", "5-hasil", "6-pick", "7-riwayat", "8-cek-saham", "9-porto", "10-backtest")
         for (i in names.indices) {
             screen = i
+            if (i == 9) repeat(8) { Thread.sleep(1000); compose.mainClock.advanceTimeBy(500) }
             compose.mainClock.advanceTimeBy(1500)
             Thread.sleep(800)
             compose.mainClock.advanceTimeBy(1500)

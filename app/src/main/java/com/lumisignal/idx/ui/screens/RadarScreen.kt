@@ -113,6 +113,13 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
         scanDone = true
         if (RadarRepo.day.value != null) stage = STAGE_TIER
     }
+    val ctx = LocalContext.current
+    // After a screening every pick of every tier and signal type goes into the strategy history,
+    // where it is audited with live prices.
+    LaunchedEffect(day?.date, scanDone) {
+        val d = RadarRepo.day.value ?: return@LaunchedEffect
+        if (scanDone && RadarPorto.saveAll(d) > 0) Monitor.refreshIfStale(ctx, 0)
+    }
     val back: () -> Unit = {
         when (stage) {
             STAGE_RESULT -> stage = STAGE_JENIS
@@ -136,7 +143,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
             onBack = back,
         )
         when {
-            stage == STAGE_SCAN && !scanDone -> ScanView()
+            stage == STAGE_SCAN && !scanDone -> ScanView(d)
             d == null -> Column(Modifier.padding(18.dp)) {
                 GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Red) {
                     Text("Radar belum bisa dimuat", style = MaterialTheme.typography.titleMedium, color = Lumi.Red)
@@ -150,14 +157,7 @@ fun RadarScreen(onBack: () -> Unit, onOpenPick: OpenPick, initialStage: Int = ST
             }
             stage == STAGE_TIER || stage == STAGE_SCAN -> TierStep(d, tier) { RadarRepo.setTier(it); stage = STAGE_JENIS }
             stage == STAGE_JENIS -> JenisStep(d, tier, jenis) { jenis = it; RadarRepo.jenis = it; stage = STAGE_RESULT }
-            else -> {
-                val ctx = LocalContext.current
-                // Every shown result goes into the strategy history and is audited with live prices.
-                LaunchedEffect(d.date, tier, jenis) {
-                    if (RadarPorto.saveScreening(d, tier, jenis) > 0) Monitor.refreshIfStale(ctx, 0)
-                }
-                ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
-            }
+            else -> ResultList(d, tier, jenis, state.error, onOpenPick, onChangeTier = { stage = STAGE_TIER }, onChangeJenis = { stage = STAGE_JENIS })
         }
     }
 }
@@ -170,7 +170,7 @@ private val SCAN_STEPS = listOf(
 )
 
 @Composable
-private fun ScanView() {
+private fun ScanView(d: RadarDay?) {
     var step by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -190,6 +190,10 @@ private fun ScanView() {
         Text(SCAN_STEPS[step], style = MaterialTheme.typography.bodyMedium, color = Lumi.Sky)
         Spacer(Modifier.height(18.dp))
         ProgressBar(((step + 1) / SCAN_STEPS.size.toFloat()))
+        if (d != null) {
+            Spacer(Modifier.height(24.dp))
+            DateBanner(d)
+        }
     }
 }
 
@@ -205,6 +209,7 @@ private fun TierStep(d: RadarDay, selected: String, onPick: (String) -> Unit) {
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item { DateBanner(d) }
         item { MarketCard(d, null) }
         item {
             Text(
@@ -246,6 +251,8 @@ private fun TierStep(d: RadarDay, selected: String, onPick: (String) -> Unit) {
 @Composable
 private fun JenisStep(d: RadarDay, tier: String, selected: String, onPick: (String) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
+        DateBanner(d)
+        Spacer(Modifier.height(12.dp))
         Pill(d.tierLabel(tier), Lumi.Sky)
         Spacer(Modifier.height(12.dp))
         listOf("profit", "winrate").forEach { j ->
@@ -291,6 +298,7 @@ private fun ResultList(
                 ChangeChip(d.jenisLabel(jenis), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE), onChangeJenis)
             }
         }
+        item { DateBanner(d) }
         item { MarketCard(d, error) }
         if (board == null || specs == null) {
             item { EmptyState("Belum ada data", "Radar untuk pilihan ini belum tersedia.") }
@@ -307,6 +315,28 @@ private fun ResultList(
                 "Radar diperbarui otomatis setiap hari bursa ±17:50 WIB dari closing semua saham. Hasil nyata setiap sinyal tercatat di tab Riwayat.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
+        }
+    }
+}
+
+/** Which closing the screening used and for which session the buys are meant. */
+@Composable
+fun DateBanner(d: RadarDay) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+            .background(Brush.horizontalGradient(listOf(Lumi.Blue.copy(alpha = 0.22f), Lumi.Green.copy(alpha = 0.14f))))
+            .border(1.dp, Lumi.Sky.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("DATA CLOSING", style = MaterialTheme.typography.labelSmall, color = Lumi.Sky)
+            Text(Market.prettyDate(d.date), style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+        }
+        Text("→", style = MaterialTheme.typography.titleLarge, color = Lumi.TextMuted, modifier = Modifier.padding(horizontal = 8.dp))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            Text("UNTUK DIBELI", style = MaterialTheme.typography.labelSmall, color = Lumi.Green)
+            Text(Market.prettyDate(RadarPorto.nextSession(d.date)), style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
         }
     }
 }

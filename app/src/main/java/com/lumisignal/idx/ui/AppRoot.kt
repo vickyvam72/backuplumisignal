@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +57,7 @@ import com.lumisignal.idx.ui.screens.HistoryScreen
 import com.lumisignal.idx.ui.screens.HomeScreen
 import com.lumisignal.idx.ui.screens.LoginFlow
 import com.lumisignal.idx.ui.screens.CekSahamScreen
+import com.lumisignal.idx.ui.screens.BacktestScreen
 import com.lumisignal.idx.ui.screens.PermissionScreen
 import com.lumisignal.idx.ui.screens.RadarPickScreen
 import com.lumisignal.idx.ui.screens.RadarScreen
@@ -153,6 +155,7 @@ private fun TabsScreen(nav: NavHostController) {
                     onOpenPick = { tier, jenis, sid, ticker, g -> nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}") },
                     onOpenSignal = { nav.navigate("detail/$it") },
                 )
+                3 -> BacktestScreen()
                 else -> SettingsScreen()
             }
         }
@@ -176,7 +179,8 @@ private fun BottomBar(selected: Int, onSelect: (Int) -> Unit) {
         NavItem(Icons.Filled.Home, "Beranda", selected == 0, Modifier.weight(1f)) { onSelect(0) }
         NavItem(Icons.AutoMirrored.Filled.List, "Riwayat", selected == 1, Modifier.weight(1f)) { onSelect(1) }
         NavItem(Icons.Filled.Search, "Cek Saham", selected == 2, Modifier.weight(1f)) { onSelect(2) }
-        NavItem(Icons.Filled.AccountCircle, "Akun", selected == 3, Modifier.weight(1f)) { onSelect(3) }
+        NavItem(Icons.Filled.DateRange, "Backtest", selected == 3, Modifier.weight(1f)) { onSelect(3) }
+        NavItem(Icons.Filled.AccountCircle, "Akun", selected == 4, Modifier.weight(1f)) { onSelect(4) }
     }
 }
 
@@ -192,6 +196,6 @@ private fun NavItem(icon: ImageVector, label: String, selected: Boolean, modifie
     ) {
         Icon(icon, label, tint = if (selected) Lumi.Sky else Lumi.TextMuted, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) Lumi.Sky else Lumi.TextMuted)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) Lumi.Sky else Lumi.TextMuted, maxLines = 1)
     }
 }

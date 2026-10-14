@@ -133,7 +133,7 @@ object Monitor {
             val now = Market.now()
             if (!RadarRepo.isStale(now)) return
             val d = RadarRepo.refresh()
-            RadarPorto.saveScreening(d, RadarRepo.tier.value, RadarRepo.jenis)
+            RadarPorto.saveAll(d)
             if (d.date >= RadarRepo.expectedDate(now) && RadarRepo.notifiedDate != d.date) {
                 RadarRepo.notifiedDate = d.date
                 val tier = RadarRepo.tier.value

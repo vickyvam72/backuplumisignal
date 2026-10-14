@@ -154,6 +154,16 @@ private fun TrackingCard(sig: Signal) {
         Spacer(Modifier.height(8.dp))
         Text(sig.statusNote, style = MaterialTheme.typography.bodyMedium, color = Lumi.TextDim)
         Spacer(Modifier.height(10.dp))
+        TradeTimeline(
+            signal = sig.refDate, buy = sig.entryDate, sell = sig.exitDate, hold = sig.holdDays,
+            pending = when {
+                sig.status == SignalStatus.CANCELLED -> "batal"
+                sig.entryDate == null -> "menunggu"
+                sig.isOpen -> "masih dipegang"
+                else -> null
+            },
+        )
+        Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile("Masuk", sig.entryPrice?.let { Fmt.price(it) } ?: "–", Modifier.weight(1f), Lumi.Blue)
             StatTile("Terakhir", Fmt.price(sig.lastPrice), Modifier.weight(1f))

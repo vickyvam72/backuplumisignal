@@ -192,6 +192,17 @@ data class Signal(
             else -> null
         }
 
+    /** Trading sessions held, entry day included (to the exit, or so far for an open position). */
+    val holdDays: Int?
+        get() {
+            val start = entryDate ?: return null
+            val end = exitDate ?: "9999-12-31"
+            val dates = trackBars.map { it.date }.toMutableSet()
+            live?.let { dates += it.date }
+            val n = dates.count { it >= start && it <= end }
+            return maxOf(n, 1)
+        }
+
     val countsAsWin: Boolean get() = outcome == true
     val countsAsLoss: Boolean get() = outcome == false
 }

@@ -182,6 +182,33 @@ object RadarRepo {
         }
     }
 
+    private val _btIndex = MutableStateFlow<com.lumisignal.idx.data.BacktestIndex?>(null)
+    val btIndex: StateFlow<com.lumisignal.idx.data.BacktestIndex?> = _btIndex.asStateFlow()
+    private val btMonths = HashMap<String, List<com.lumisignal.idx.data.BtTrade>>()
+
+    /** Months available in the backtest (cached after the first download). */
+    suspend fun backtestIndex(): com.lumisignal.idx.data.BacktestIndex? {
+        _btIndex.value?.let { return it }
+        val text = try {
+            download("backtest/index.json").also { writeCached("bt_index.json", it) }
+        } catch (e: Exception) {
+            readCached("bt_index.json")
+        } ?: return null
+        return runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestIndex.serializer(), text) }.getOrNull()?.also { _btIndex.value = it }
+    }
+
+    /** All simulated trades of one month (signal month). */
+    suspend fun backtestMonth(month: String): List<com.lumisignal.idx.data.BtTrade>? {
+        btMonths[month]?.let { return it }
+        val text = readCached("bt_$month.json") ?: try {
+            download("backtest/$month.json").also { writeCached("bt_$month.json", it) }
+        } catch (e: Exception) {
+            null
+        } ?: return null
+        val f = runCatching { LumiJson.decodeFromString(com.lumisignal.idx.data.BacktestMonthFile.serializer(), text) }.getOrNull() ?: return null
+        return f.rows.mapNotNull { com.lumisignal.idx.data.BtTrade.parse(it) }.also { btMonths[month] = it }
+    }
+
     /** Forgets the downloaded screening results (they are fetched again on the next screening). */
     fun clearLocal() {
         listOf("latest.json", "stocks.json").forEach { File(dir, it).delete() }

@@ -1,1 +1,1 @@
-{"date":"2026-10-13","go_live":"2026-10-14","rows":[]}
+{"date":"2026-10-13","go_live":"2026-10-13","rows":[{"date":"2026-10-13","jenis":"winrate","sid":104,"g":true,"ticker":"TRIN","close":159.0,"status":"menunggu"},{"date":"2026-10-13","jenis":"winrate","sid":104,"g":true,"ticker":"CUAN","close":665.0,"status":"menunggu"},{"date":"2026-10-13","jenis":"winrate","sid":104,"g":false,"ticker":"TRIN","close":159.0,"status":"menunggu"},{"date":"2026-10-13","jenis":"winrate","sid":104,"g":false,"ticker":"CUAN","close":665.0,"status":"menunggu"}]}

@@ -7,6 +7,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,23 +28,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,30 +53,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lumisignal.idx.Graph
-import com.lumisignal.idx.data.SOURCE_STRATEGY
+import com.lumisignal.idx.data.RadarDay
+import com.lumisignal.idx.engine.Fmt
 import com.lumisignal.idx.engine.Market
-import com.lumisignal.idx.engine.ScanManager
-import com.lumisignal.idx.engine.Strategy
-import com.lumisignal.idx.service.ScanService
+import com.lumisignal.idx.engine.RadarPorto
+import com.lumisignal.idx.engine.RadarRepo
 import com.lumisignal.idx.ui.components.GlassCard
 import com.lumisignal.idx.ui.components.GradientButton
 import com.lumisignal.idx.ui.components.LumiLogo
 import com.lumisignal.idx.ui.components.Pill
-import com.lumisignal.idx.ui.components.ProgressBar
+import com.lumisignal.idx.ui.components.RadarBadge
 import com.lumisignal.idx.ui.components.SectionHeader
 import com.lumisignal.idx.ui.components.Sparkle
-import com.lumisignal.idx.ui.components.StrategyBadge
-import com.lumisignal.idx.ui.components.winStats
 import com.lumisignal.idx.ui.theme.Lumi
 import com.lumisignal.idx.ui.theme.NumberStyle
+import kotlinx.coroutines.launch
 
 @Composable
-fun HomeScreen(onOpenScan: () -> Unit, onManual: (String) -> Unit) {
-    val ctx = LocalContext.current
-    val scan by ScanManager.state.collectAsStateWithLifecycle()
-    val items by Graph.history.items.collectAsStateWithLifecycle()
-    var confirm by remember { mutableStateOf<Strategy?>(null) }
+fun HomeScreen(onOpenRadar: () -> Unit, onManual: (String) -> Unit) {
+    val day by RadarRepo.day.collectAsStateWithLifecycle()
+    val state by RadarRepo.state.collectAsStateWithLifecycle()
+    val tier by RadarRepo.tier.collectAsStateWithLifecycle()
     val name = remember { Graph.session.displayName }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        if (day == null || RadarRepo.isStale()) runCatching { RadarRepo.refresh() }
+    }
 
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
@@ -93,75 +98,52 @@ fun HomeScreen(onOpenScan: () -> Unit, onManual: (String) -> Unit) {
         }
         Spacer(Modifier.height(18.dp))
 
-        RadarHero(scan.running, scan.phase, scan.done, scan.total, onOpenScan)
+        RadarHero(day, state.loading, tier) {
+            scope.launch { runCatching { RadarRepo.refresh() } }
+            onOpenRadar()
+        }
+        Spacer(Modifier.height(14.dp))
+        TierChips(day, tier) { RadarRepo.setTier(it) }
         Spacer(Modifier.height(16.dp))
 
-        ManualSearch(onManual)
-        Spacer(Modifier.height(22.dp))
-
-        SectionHeader("Pilih strategi", subtitle = "Hasilnya 5 saham terbaik, otomatis masuk Riwayat Strategi")
-        Spacer(Modifier.height(10.dp))
-        Strategy.entries.forEach { s ->
-            val st = winStats(items.filter { it.source == SOURCE_STRATEGY && it.strategyId == s.id })
-            StrategyCard(s, st.total, st.winRate, onClick = { if (!scan.running) confirm = s else onOpenScan() })
+        day?.let { d ->
+            SectionHeader("Top 5 gabungan", subtitle = "Ringkasan radar ${d.tierLabel(tier)} · ketuk untuk detail semua strategi")
             Spacer(Modifier.height(10.dp))
+            listOf("profit", "winrate").forEach { j ->
+                TopStrip(d, tier, j, onOpenRadar)
+                Spacer(Modifier.height(10.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            SectionHeader("Strategi di tingkat ini", subtitle = "Tiap tingkat likuiditas punya 5 strategi sendiri untuk tiap jenis sinyal")
+            Spacer(Modifier.height(10.dp))
+            StrategyGallery(d, tier, onOpenRadar)
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(8.dp))
+
+        ManualSearch(onManual)
+        Spacer(Modifier.height(16.dp))
         Text(
-            "Lumi Signal adalah alat bantu screening, bukan rekomendasi investasi. Sinyal dihitung dari data closing; saham gorengan bisa bergerak di luar perkiraan. Selalu gunakan stop loss dan atur ukuran posisi.",
+            "Lumi Signal adalah alat bantu screening, bukan rekomendasi investasi. Sinyal dihitung dari data closing; saham bisa bergerak di luar perkiraan. Selalu gunakan stop loss dan atur ukuran posisi.",
             style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
         )
         Spacer(Modifier.height(24.dp))
     }
-
-    confirm?.let { s ->
-        AlertDialog(
-            onDismissRequest = { confirm = null },
-            containerColor = Lumi.Surface,
-            title = { Text(s.title, style = MaterialTheme.typography.titleLarge, color = Lumi.Text) },
-            text = {
-                Column {
-                    Text(s.description, style = MaterialTheme.typography.bodyMedium, color = Lumi.TextDim)
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Screening pertama di hari bursa yang sama memeriksa ±900 saham (±5–8 menit). Screening berikutnya memakai cache sehingga jauh lebih cepat. Proses tetap berjalan walau aplikasi ditutup.",
-                        style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirm = null
-                    ScanService.start(ctx, s)
-                    onOpenScan()
-                }) { Text("Mulai screening", color = Lumi.Sky) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirm = null }) { Text("Batal", color = Lumi.TextDim) }
-            },
-        )
-    }
 }
 
 @Composable
-private fun RadarHero(running: Boolean, phase: String, done: Int, total: Int, onOpenScan: () -> Unit) {
+private fun RadarHero(day: RadarDay?, loading: Boolean, tier: String, onScreen: () -> Unit) {
     val spin = rememberInfiniteTransition(label = "radar")
     val angle by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(4000, easing = LinearEasing)), label = "angle")
-    val ref = Graph.cache.lastRefDate
-    val now = Market.now()
-    val note = if (Market.sessionInProgress(now)) {
-        "Bursa masih berjalan — analisa memakai closing sesi sebelumnya."
-    } else {
-        "Data closing hari ini final setelah 16:30 WIB."
-    }
-    GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue, onClick = if (running) onOpenScan else null) {
+    val stale = RadarRepo.isStale()
+    val count = day?.boards?.get(tier)?.values?.sumOf { b -> b.strategies.sumOf { s -> s.picks.count { it.valid } } } ?: 0
+    GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier.size(64.dp).clip(RoundedCornerShape(50))
                         .background(Brush.radialGradient(listOf(Lumi.Blue.copy(alpha = 0.35f), Lumi.Blue.copy(alpha = 0.02f)))),
                 )
-                Box(Modifier.size(46.dp).rotate(if (running) angle else 0f), contentAlignment = Alignment.TopCenter) {
+                Box(Modifier.size(46.dp).rotate(if (loading) angle else 0f), contentAlignment = Alignment.TopCenter) {
                     Sparkle(14.dp, Lumi.Sky)
                 }
                 Sparkle(18.dp, Lumi.Text)
@@ -170,20 +152,102 @@ private fun RadarHero(running: Boolean, phase: String, done: Int, total: Int, on
             Column(Modifier.weight(1f)) {
                 Text("RADAR BESOK", style = MaterialTheme.typography.labelSmall, color = Lumi.Sky)
                 Text(
-                    if (ref.isNotBlank()) "Closing ${Market.prettyDate(ref)}" else "Analisa dari harga closing",
+                    if (day != null) "Closing ${Market.prettyDate(day.date, false)}" else "Screening dari harga closing",
                     style = MaterialTheme.typography.titleMedium, color = Lumi.Text,
                 )
-                Text(note, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Text(
+                    when {
+                        day == null -> "Sekali ketuk: semua strategi di semua tingkat likuiditas."
+                        stale -> "Radar closing berikutnya terbit ±17:50 WIB setiap hari bursa."
+                        else -> "$count sinyal di ${day.tierLabel(tier)} · beli ${Market.prettyDate(RadarPorto.nextSession(day.date), false)}"
+                    },
+                    style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                )
             }
         }
-        if (running) {
-            Spacer(Modifier.height(14.dp))
-            Text(phase, style = MaterialTheme.typography.labelMedium, color = Lumi.Sky)
-            Spacer(Modifier.height(6.dp))
-            ProgressBar(if (total > 0) done.toFloat() / total else 0f)
-            Spacer(Modifier.height(6.dp))
-            Text("Ketuk untuk melihat progres screening", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+        day?.market?.let { m ->
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Pill(m.label, if (m.guard) Lumi.Red else if (m.weak30) Lumi.Amber else Lumi.Green)
+                Pill("${Fmt.share(m.breadthMa5)} saham > MA20", Lumi.Sky)
+            }
         }
+        Spacer(Modifier.height(14.dp))
+        GradientButton(
+            if (loading) "Mengambil radar…" else "Screening sekarang",
+            onScreen, Modifier.fillMaxWidth(), enabled = !loading, icon = Icons.Filled.PlayArrow,
+        )
+    }
+}
+
+@Composable
+private fun TopStrip(d: RadarDay, tier: String, jenis: String, onOpen: () -> Unit) {
+    val picks = d.board(tier, jenis)?.top5?.filter { it.valid }.orEmpty()
+    val color = if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
+    GlassCard(Modifier.fillMaxWidth(), accent = color, padding = 14.dp, onClick = onOpen) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(d.jenisLabel(jenis), style = MaterialTheme.typography.titleSmall, color = Lumi.Text, modifier = Modifier.weight(1f))
+            d.specs[tier]?.get(jenis)?.top5Stats?.let {
+                Text("backtest WR ${Fmt.num(it.winrate, 0)}%", style = MaterialTheme.typography.labelSmall, color = color)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (picks.isEmpty()) {
+            Text("Tidak ada sinyal hari ini", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+        } else {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                picks.forEach { p ->
+                    val meta = p.sid?.let { d.strategy(it) }
+                    Row(
+                        Modifier.clip(RoundedCornerShape(14.dp)).background(Lumi.Bg.copy(alpha = 0.5f))
+                            .border(1.dp, Lumi.Border, RoundedCornerShape(14.dp)).padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadarBadge(meta?.icon ?: "", meta?.color ?: "#3D8BFF", jenis, 24.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Column {
+                            Text(p.ticker, style = NumberStyle.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
+                            Text("≤ ${Fmt.price(p.entryHigh)}", style = MaterialTheme.typography.labelSmall, color = Lumi.TextDim)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StrategyGallery(d: RadarDay, tier: String, onOpen: () -> Unit) {
+    listOf("profit", "winrate").forEach { jenis ->
+        val board = d.board(tier, jenis) ?: return@forEach
+        val specs = d.specs[tier]?.get(jenis)?.strategies.orEmpty()
+        Text(d.jenisLabel(jenis).uppercase(), style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            board.strategies.forEach { bs ->
+                val meta = d.strategy(bs.id)
+                val spec = specs.firstOrNull { it.id == bs.id }
+                val n = bs.picks.count { it.valid }
+                Column(
+                    Modifier.width(118.dp).clip(RoundedCornerShape(18.dp)).background(Lumi.Surface.copy(alpha = 0.8f))
+                        .border(1.dp, Lumi.Border, RoundedCornerShape(18.dp)).clickable(onClick = onOpen).padding(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadarBadge(meta?.icon ?: "", meta?.color ?: "#3D8BFF", jenis, 38.dp)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            if (!bs.active) "off" else "$n",
+                            style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                            color = if (!bs.active) Lumi.TextMuted else if (n > 0) Lumi.Green else Lumi.TextDim,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(meta?.name ?: "", style = MaterialTheme.typography.labelMedium, color = Lumi.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(34.dp))
+                    spec?.let { Text("WR ${Fmt.num(it.stats.winrate, 0)}% · ${Fmt.pct(it.stats.akumulasiPl, decimals = 0)}", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted) }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -192,8 +256,8 @@ private fun ManualSearch(onManual: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     val valid = text.trim().length == 4
     GlassCard(Modifier.fillMaxWidth(), padding = 14.dp) {
-        Text("Analisa manual", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
-        Text("Cek satu saham terhadap kelima strategi sekaligus", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+        Text("Cek satu saham", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+        Text("Lihat strategi radar mana yang dipenuhi, chart, dan jejak bandarnya", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
@@ -220,32 +284,7 @@ private fun ManualSearch(onManual: (String) -> Unit) {
                 }
             }
             Spacer(Modifier.width(10.dp))
-            GradientButton("Analisa", { if (valid) onManual(text.trim()) }, enabled = valid)
-        }
-    }
-}
-
-@Composable
-private fun StrategyCard(s: Strategy, total: Int, winRate: Double?, onClick: () -> Unit) {
-    val accent = Lumi.strategyColor(s.id)
-    GlassCard(Modifier.fillMaxWidth(), accent = accent, padding = 14.dp, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StrategyBadge(s.id, 44.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(s.title, style = MaterialTheme.typography.titleSmall, color = Lumi.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(s.tagline, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Pill("Risiko ${s.risk}", accent)
-                    if (winRate != null) Pill("Winrate ${winRate.toInt()}%", Lumi.Green)
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.PlayArrow, "Mulai", tint = accent) }
+            GradientButton("Cek", { if (valid) onManual(text.trim()) }, enabled = valid)
         }
     }
 }

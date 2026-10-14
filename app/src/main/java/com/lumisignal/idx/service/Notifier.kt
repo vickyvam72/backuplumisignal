@@ -29,15 +29,12 @@ object Notifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
-            NotificationChannel(CH_SIGNALS, "Pemantauan sinyal", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Pemberitahuan saat harga menyentuh entry, TP, atau SL"
+            NotificationChannel(CH_SIGNALS, "Sinyal & pemantauan", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Radar Besok terbit, dan saat harga posisi menyentuh entry, TP, atau SL"
             },
         )
-        nm.createNotificationChannel(
-            NotificationChannel(CH_SCAN, "Proses screening", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Progres screening yang berjalan di latar belakang"
-            },
-        )
+        // The old foreground "screening" channel is gone: screening now runs on the server.
+        nm.deleteNotificationChannel(CH_SCAN)
     }
 
     fun canNotify(ctx: Context): Boolean =
@@ -52,19 +49,7 @@ object Notifier {
         return PendingIntent.getActivity(ctx, req, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    fun scanProgress(ctx: Context, title: String, text: String, done: Int, total: Int): android.app.Notification =
-        NotificationCompat.Builder(ctx, CH_SCAN)
-            .setSmallIcon(R.drawable.ic_stat_lumi)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setColor(0xFF3D8BFF.toInt())
-            .setProgress(if (total > 0) total else 0, done, total <= 0)
-            .setContentIntent(openIntent(ctx, EXTRA_OPEN_SCAN, "1", 1))
-            .build()
-
-    fun scanDone(ctx: Context, title: String, text: String) {
+    fun radarReady(ctx: Context, title: String, text: String) {
         if (!canNotify(ctx)) return
         val n = NotificationCompat.Builder(ctx, CH_SIGNALS)
             .setSmallIcon(R.drawable.ic_stat_lumi)

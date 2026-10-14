@@ -79,7 +79,9 @@ fun SignalDetailScreen(id: String, onBack: () -> Unit) {
     val porto = if (sig.source == SOURCE_STRATEGY) items.firstOrNull { it.source == SOURCE_PORTO && it.linkedId == sig.id } else null
     val chartBars = (sig.bars + sig.trackBars).associateBy { it.date }.values.sortedBy { it.date }
 
-    AnalysisDetail(
+    if (sig.radar != null) {
+        RadarSignalDetail(sig, chartBars, onBack, onDelete = { deleteDialog = true })
+    } else AnalysisDetail(
         symbol = sig.symbol,
         name = sig.name,
         strategy = Strategy.byId(sig.strategyId),
@@ -163,6 +165,77 @@ private fun TrackingCard(sig: Signal) {
             "Diperbarui: $updated · dipantau tiap ±15 menit saat bursa buka, dan dicek ulang dengan candle harian setelah tutup.",
             style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
         )
+    }
+}
+
+/** Portfolio position taken from the Radar Besok screening. */
+@Composable
+private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> Unit, onDelete: () -> Unit) {
+    val tag = sig.radar ?: return
+    val accent = com.lumisignal.idx.ui.components.hexColor(tag.color)
+    val plan = sig.eval.plan
+    Column(Modifier.fillMaxSize()) {
+        ScreenHeader(sig.symbol, subtitle = sig.name.ifBlank { tag.name }, onBack = onBack)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
+            GlassCard(Modifier.fillMaxWidth(), accent = accent) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.lumisignal.idx.ui.components.RadarBadge(tag.icon, tag.color, tag.jenis, 44.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "PORTO · " + (if (tag.jenis == "profit") "PROFIT BESAR" else "WINRATE TINGGI") + if (tag.combined) " · TOP 5 GABUNGAN" else "",
+                            style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
+                        )
+                        Text(tag.name, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+                        Text("Sinyal closing ${Market.prettyDate(sig.refDate)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(Fmt.price(sig.close), style = NumberStyle.copy(fontSize = 30.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        Fmt.pct(sig.changePct), style = NumberStyle.copy(fontSize = 16.sp),
+                        color = if (sig.changePct >= 0) Lumi.Green else Lumi.Red, modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            TrackingCard(sig)
+            Spacer(Modifier.height(12.dp))
+            plan?.let {
+                GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue) {
+                    SectionHeader("Rencana trading", subtitle = if (sig.entryPrice != null) "TP/SL dihitung dari harga beli sebenarnya" else "TP/SL dihitung dari batas beli, menyesuaikan saat terbeli")
+                    Spacer(Modifier.height(14.dp))
+                    PlanPanel(it, entryPrice = sig.entryPrice)
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            if (chartBars.isNotEmpty()) {
+                GlassCard(Modifier.fillMaxWidth(), padding = 12.dp) {
+                    SectionHeader("Chart & level trading", subtitle = "Candle harian · MA5 (biru muda) · MA20 (kuning)")
+                    Spacer(Modifier.height(10.dp))
+                    CandleChart(bars = chartBars, plan = plan, signalDate = sig.refDate)
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            GlassCard(Modifier.fillMaxWidth(), accent = accent) {
+                SectionHeader("Kenapa masuk radar")
+                Spacer(Modifier.height(8.dp))
+                ChecksPanel(sig.eval.checks, "teknikal")
+                if (tag.exitText.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Keluar: ${tag.exitText}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+                }
+                if (tag.desc.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Syarat: ${tag.desc}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            GhostButton("Hapus dari Porto", onDelete, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
+            Spacer(Modifier.height(28.dp))
+        }
     }
 }
 

@@ -101,7 +101,7 @@ fun SettingsScreen() {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Harga semua sinyal yang masih berjalan diperiksa otomatis ±15 menit sekali selama bursa buka, memakai high & low harian asli dari Stockbit.",
+                "Harga posisi Porto diperiksa otomatis ±15 menit sekali selama bursa buka, memakai high & low harian asli dari Stockbit. Notifikasi juga muncul saat Radar Besok terbit.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
             if (!notif || !bg) {
@@ -116,11 +116,11 @@ fun SettingsScreen() {
         SectionHeader("Cara kerja Lumi")
         Spacer(Modifier.height(8.dp))
         GlassCard(Modifier.fillMaxWidth()) {
-            Bullet("Analisa memakai harga closing sesi terakhir yang sudah selesai. Scan Rabu 16:31 memakai closing Rabu; scan Kamis 12:00 tetap memakai closing Rabu.")
-            Bullet("Screening dua tahap: semua saham disaring dari candle harian, lalu maksimal 50 kandidat dianalisa broker summary-nya. Hasil akhir adalah 5 saham dengan skor tertinggi.")
-            Bullet("Stop loss diletakkan di bawah level struktur (low hari sinyal, level breakout, modal bandar, atau VWAP hari ARA), dibatasi 7–10% agar tidak terlalu jauh.")
-            Bullet("Setiap sinyal punya satu entry, satu TP, dan satu SL. TP dianggap tercapai begitu high harian menyentuh TP. Sinyal batal jika dibuka di bawah batas batal atau tidak menyentuh area beli dalam 2 sesi.")
-            Bullet("Winrate dihitung dari sinyal yang selesai: TP = menang, SL = kalah. Sinyal batal tidak dihitung.")
+            Bullet("Radar Besok dihitung otomatis setiap hari bursa ±17:50 WIB dari closing semua saham IDX, dengan mesin yang sama persis dengan backtest 1 tahun. Sekali buka, semua strategi di semua tingkat likuiditas langsung tampil.")
+            Bullet("Dua jenis sinyal: Profit besar (target lebar dari ATR atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Tiap tingkat likuiditas punya 5 strateginya sendiri, plus Top 5 gabungan.")
+            Bullet("Beli di sesi berikutnya: di harga pembukaan bila ≤ closing +1%, kalau dibuka lebih tinggi antre di closing +1%. Tidak terisi di sesi itu = batal. Saham yang masih dipegang tidak direkomendasikan lagi.")
+            Bullet("TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah) dan dihitung dari harga beli sebenarnya. Kalau belum kena TP/SL, posisi dijual di closing hari terakhir masa hold.")
+            Bullet("Riwayat Strategi berisi hasil nyata setiap rekomendasi radar; winrate = transaksi untung dibagi transaksi selesai, akumulasi P/L = jumlah P/L real. Porto dipantau dengan harga Stockbit milikmu.")
         }
         Spacer(Modifier.height(16.dp))
 
@@ -128,7 +128,7 @@ fun SettingsScreen() {
             Text("Disclaimer", style = MaterialTheme.typography.titleSmall, color = Lumi.Amber)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Lumi Signal IDX bukan produk resmi Stockbit dan bukan rekomendasi investasi. Data diambil dari akun Stockbit milikmu sendiri (read-only, tidak pernah membuat order). Akses otomatis bisa bertentangan dengan ketentuan Stockbit; gunakan secara wajar. Keputusan jual-beli sepenuhnya tanggung jawab pengguna.",
+                "Lumi Signal IDX bukan produk resmi Stockbit dan bukan rekomendasi investasi. Radar memakai data harga publik; pemantauan Porto dan analisa bandar memakai akun Stockbit milikmu sendiri (read-only, tidak pernah membuat order). Akses otomatis bisa bertentangan dengan ketentuan Stockbit; gunakan secara wajar. Keputusan jual-beli sepenuhnya tanggung jawab pengguna.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
             )
         }

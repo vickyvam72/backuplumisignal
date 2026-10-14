@@ -40,14 +40,17 @@ object Tracker {
         }
 
         val custom = sig.customEntry
+        val rule = plan.rule
         val st = State(
             status = if (custom != null) SignalStatus.ACTIVE else SignalStatus.WAITING,
             entry = custom,
             entryDate = if (custom != null) start else null,
             note = if (custom != null) "Posisi dibuka di ${Fmt.price(custom)}" else "Menunggu harga masuk area beli",
         )
-        val sl = plan.stopLoss
-        val tp = plan.tp
+        var sl = plan.stopLoss
+        var tp = plan.tp
+        // Radar: TP/SL follow the real entry price (backtest rule, IDX price fractions).
+        if (rule != null && custom != null) rule.levels(custom)?.let { (t, s) -> tp = t; sl = s }
 
         fun hitSl(date: String, low: Double?) {
             st.status = SignalStatus.SL
@@ -65,6 +68,7 @@ object Tracker {
         }
 
         fun fill(price: Double, date: String): Boolean {
+            if (rule != null) rule.levels(price)?.let { (t, s) -> tp = t; sl = s }
             if (price <= sl) {
                 st.status = SignalStatus.CANCELLED
                 st.exitDate = date
@@ -100,9 +104,11 @@ object Tracker {
             if (path != null && path.isNotEmpty()) {
                 // ---- Replay the real minute-by-minute order of the day.
                 val ticks = (if (b.open > 0) listOf(b.open) else emptyList()) + path
-                for (px in ticks) {
+                for ((ti, px) in ticks.withIndex()) {
                     if (st.status == SignalStatus.WAITING) {
-                        if (px <= plan.entryHigh && !fill(px, b.date)) break
+                        // A buy limit at the top of the zone: the opening fills at the open, later at the limit.
+                        val fillPx = if (rule != null && !(ti == 0 && b.open > 0)) plan.entryHigh else px
+                        if (px <= plan.entryHigh && !fill(fillPx, b.date)) break
                         if (st.status == SignalStatus.WAITING) continue
                     }
                     if (st.status == SignalStatus.ACTIVE) {
@@ -123,10 +129,10 @@ object Tracker {
                     if (tpHit && !slHit) { hitTp(b.date, b.high); break }
                     if (slHit && tpHit) { hitSl(b.date, b.low); break }
                 }
-                if (st.status == SignalStatus.WAITING && idx >= 2 && !step.live) {
+                if (st.status == SignalStatus.WAITING && idx >= plan.entrySessions && !step.live) {
                     st.status = SignalStatus.CANCELLED
                     st.exitDate = b.date
-                    st.note = "Harga tidak menyentuh area beli dalam 2 sesi"
+                    st.note = cancelNote(plan.entrySessions)
                     break
                 }
             } else {
@@ -135,10 +141,10 @@ object Tracker {
                     if (b.low <= plan.entryHigh) {
                         val price = if (b.open in 0.01..plan.entryHigh) b.open else plan.entryHigh
                         if (!fill(price, b.date)) break
-                    } else if (idx >= 2 && !step.live) {
+                    } else if (idx >= plan.entrySessions && !step.live) {
                         st.status = SignalStatus.CANCELLED
                         st.exitDate = b.date
-                        st.note = "Harga tidak menyentuh area beli dalam 2 sesi"
+                        st.note = cancelNote(plan.entrySessions)
                         break
                     }
                 }
@@ -158,7 +164,9 @@ object Tracker {
         }
 
         val last = steps.lastOrNull()?.bar?.close ?: sig.lastPrice ?: sig.close
+        val shownPlan = if (rule != null && st.entry != null) plan.copy(tp = tp, stopLoss = sl) else plan
         return sig.copy(
+            eval = if (shownPlan === plan) sig.eval else sig.eval.copy(plan = shownPlan),
             status = st.status,
             statusNote = st.note,
             entryPrice = st.entry,
@@ -168,6 +176,10 @@ object Tracker {
             lastPrice = last,
         )
     }
+
+    private fun cancelNote(sessions: Int): String =
+        if (sessions <= 1) "Harga tidak masuk area beli di sesi pertama, order beli gugur"
+        else "Harga tidak menyentuh area beli dalam $sessions sesi"
 
     fun label(s: SignalStatus): String = when (s) {
         SignalStatus.WAITING -> "Menunggu entry"

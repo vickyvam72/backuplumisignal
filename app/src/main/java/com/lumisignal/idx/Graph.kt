@@ -32,6 +32,7 @@ object Graph {
         api = StockbitApi(session)
         history = HistoryStore(context)
         cache = CacheStore(context)
+        com.lumisignal.idx.engine.RadarRepo.init(context)
         ready = true
     }
 }

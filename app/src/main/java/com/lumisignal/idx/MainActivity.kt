@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         val scan = intent?.getStringExtra(Notifier.EXTRA_OPEN_SCAN)
         when {
             signal != null -> PendingNav.value = "detail/$signal"
-            scan == "1" -> PendingNav.value = "scan"
+            scan == "1" -> PendingNav.value = "radar"
         }
     }
 }

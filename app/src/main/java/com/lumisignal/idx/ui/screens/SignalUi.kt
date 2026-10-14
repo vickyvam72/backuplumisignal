@@ -19,8 +19,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,12 +44,11 @@ import com.lumisignal.idx.data.SignalStatus
 import com.lumisignal.idx.engine.Fmt
 import com.lumisignal.idx.engine.Market
 import com.lumisignal.idx.engine.Strategy
-import com.lumisignal.idx.ui.components.GhostButton
 import com.lumisignal.idx.ui.components.GlassCard
 import com.lumisignal.idx.ui.components.Pill
-import com.lumisignal.idx.ui.components.ScoreRing
 import com.lumisignal.idx.ui.components.StatusBadge
 import com.lumisignal.idx.ui.components.StrategyBadge
+import com.lumisignal.idx.ui.components.RadarBadge
 import com.lumisignal.idx.ui.theme.Lumi
 import com.lumisignal.idx.ui.theme.NumberStyle
 
@@ -68,56 +65,6 @@ fun ScreenHeader(title: String, subtitle: String? = null, onBack: () -> Unit, tr
             if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         trailing?.invoke()
-    }
-}
-
-/** A top-N screening result. */
-@Composable
-fun ResultCard(rank: Int, sig: Signal, inPorto: Boolean, onOpen: () -> Unit, onPorto: () -> Unit) {
-    val accent = Lumi.strategyColor(sig.strategyId)
-    val plan = sig.eval.plan
-    GlassCard(Modifier.fillMaxWidth(), accent = accent, onClick = onOpen) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("#$rank", style = NumberStyle.copy(fontSize = 15.sp), color = accent)
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sig.symbol, style = NumberStyle.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        Fmt.pct(sig.changePct), style = NumberStyle.copy(fontSize = 14.sp),
-                        color = if (sig.changePct >= 0) Lumi.Green else Lumi.Red,
-                    )
-                }
-                if (sig.name.isNotBlank()) {
-                    Text(sig.name, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            ScoreRing(sig.eval.score, accent, 52.dp)
-        }
-        Spacer(Modifier.height(10.dp))
-        FlowPills(sig.eval.highlights.take(4), accent)
-        if (plan != null) {
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MiniLevel("BELI", if (plan.entryLow == plan.entryHigh) Fmt.price(plan.entryHigh) else "${Fmt.price(plan.entryLow)}–${Fmt.price(plan.entryHigh)}", Lumi.Blue, Modifier.weight(1.3f))
-                MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
-                MiniLevel("TP", Fmt.price(plan.tp), Lumi.Green, Modifier.weight(1f))
-            }
-        }
-        if (sig.eval.lowLiquidity) {
-            Spacer(Modifier.height(8.dp))
-            Pill("⚠ Likuiditas rendah", Lumi.Amber)
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GhostButton("Lihat analisa", onOpen, Modifier.weight(1f))
-            if (inPorto) {
-                GhostButton("Di Porto", {}, Modifier.weight(1f), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
-            } else {
-                GhostButton("Masukkan Porto", onPorto, Modifier.weight(1f), icon = Icons.Filled.Add, color = Lumi.Green)
-            }
-        }
     }
 }
 
@@ -151,7 +98,8 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
     val plan = sig.eval.plan
     GlassCard(Modifier.fillMaxWidth(), padding = 14.dp, onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StrategyBadge(sig.strategyId, 36.dp)
+            val tag = sig.radar
+            if (tag != null) RadarBadge(tag.icon, tag.color, tag.jenis, 36.dp) else StrategyBadge(sig.strategyId, 36.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -160,7 +108,7 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                     Text(Market.shortDate(sig.refDate), style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
                 }
                 Text(
-                    Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                    sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }

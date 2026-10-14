@@ -15,6 +15,7 @@ import com.lumisignal.idx.data.Bar
 import com.lumisignal.idx.data.LivePoint
 import com.lumisignal.idx.data.Signal
 import com.lumisignal.idx.engine.Market
+import com.lumisignal.idx.engine.RadarRepo
 import com.lumisignal.idx.engine.Tracker
 import java.util.concurrent.TimeUnit
 
@@ -43,6 +44,7 @@ object Monitor {
      * the final bars once. Returns the number of signals whose status changed.
      */
     suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int {
+        checkRadar(ctx)
         if (Graph.session.access == null) return 0
         val now = Market.now()
         val today = Market.today()
@@ -116,6 +118,32 @@ object Monitor {
         Graph.history.upsert(updated)
         Graph.cache.lastMonitorRun = System.currentTimeMillis()
         return changed
+    }
+
+    /**
+     * After the close the server publishes the new Radar Besok (±17:50 WIB). Download it once it is due
+     * and tell the user, so the results are ready before they open the app.
+     */
+    private suspend fun checkRadar(ctx: Context) {
+        try {
+            val now = Market.now()
+            if (!RadarRepo.isStale(now)) return
+            val d = RadarRepo.refresh()
+            if (d.date >= RadarRepo.expectedDate(now) && RadarRepo.notifiedDate != d.date) {
+                RadarRepo.notifiedDate = d.date
+                val tier = RadarRepo.tier.value
+                val parts = listOf("profit", "winrate").map { j ->
+                    val top = d.board(tier, j)?.top5?.filter { it.valid }.orEmpty().joinToString(", ") { it.ticker }
+                    "${d.jenisLabel(j)}: ${top.ifBlank { "tidak ada sinyal" }}"
+                }
+                Notifier.radarReady(
+                    ctx,
+                    "Radar Besok siap · closing ${Market.shortDate(d.date)}",
+                    "Top 5 gabungan ${d.tierLabel(tier)} — " + parts.joinToString(" · "),
+                )
+            }
+        } catch (e: Exception) {
+        }
     }
 
     /** Runs a pass in the app's foreground at most every few minutes (no button needed). */

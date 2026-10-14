@@ -19,10 +19,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,38 +40,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lumisignal.idx.Graph
+import com.lumisignal.idx.data.LedgerRow
+import com.lumisignal.idx.data.RadarDay
 import com.lumisignal.idx.data.SOURCE_PORTO
 import com.lumisignal.idx.data.SOURCE_STRATEGY
-import com.lumisignal.idx.engine.Strategy
+import com.lumisignal.idx.engine.Fmt
+import com.lumisignal.idx.engine.Market
+import com.lumisignal.idx.engine.RadarRepo
 import com.lumisignal.idx.service.Monitor
 import com.lumisignal.idx.ui.components.EmptyState
+import com.lumisignal.idx.ui.components.GlassCard
+import com.lumisignal.idx.ui.components.Pill
+import com.lumisignal.idx.ui.components.RadarBadge
+import com.lumisignal.idx.ui.components.StatTile
+import com.lumisignal.idx.ui.components.WinRateRing
 import com.lumisignal.idx.ui.components.WinStatsCard
 import com.lumisignal.idx.ui.components.winStats
 import com.lumisignal.idx.ui.theme.Lumi
+import com.lumisignal.idx.ui.theme.NumberStyle
 
 @Composable
 fun HistoryScreen(onOpenSignal: (String) -> Unit) {
     val ctx = LocalContext.current
     val items by Graph.history.items.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var filter by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { Monitor.refreshIfStale(ctx) }
 
-    val strategyItems = items.filter { it.source == SOURCE_STRATEGY }
-    val portoItems = items.filter { it.source == SOURCE_PORTO }
-    val shown = if (tab == 0) {
-        if (filter == 0) strategyItems else strategyItems.filter { it.strategyId == filter }
-    } else portoItems
-
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Riwayat", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
-                Text("Audit setiap sinyal & ukur winrate", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
-            }
+        Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp)) {
+            Text("Riwayat", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
+            Text("Hasil nyata setiap sinyal & winrate-nya", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
         }
         Spacer(Modifier.height(14.dp))
         Segmented(
@@ -81,69 +85,259 @@ fun HistoryScreen(onOpenSignal: (String) -> Unit) {
             modifier = Modifier.padding(horizontal = 18.dp),
         )
         Spacer(Modifier.height(12.dp))
+        if (tab == 0) StrategyHistory(onOpenSignal) else PortoHistory(items.filter { it.source == SOURCE_PORTO }, onOpenSignal)
+    }
+}
 
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (tab == 0) {
-                item {
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Chip("Semua", filter == 0, Lumi.Sky) { filter = 0 }
-                        Strategy.entries.forEach { s ->
-                            Chip("S${s.id} · ${s.tagline}", filter == s.id, Lumi.strategyColor(s.id)) { filter = s.id }
-                        }
-                    }
-                }
-                item {
-                    val title = if (filter == 0) "Semua strategi" else Strategy.byId(filter).title
-                    WinStatsCard(
-                        title, "Top 5 hasil screening yang dipantau otomatis", winStats(shown),
-                        if (filter == 0) Lumi.Sky else Lumi.strategyColor(filter),
-                    )
-                }
-                if (filter == 0 && strategyItems.isNotEmpty()) {
-                    item { StrategyLeaderboard(strategyItems) }
-                }
-            } else {
-                item {
-                    WinStatsCard("Portofolio kamu", "Saham yang kamu tandai \"Masukkan Porto\"", winStats(portoItems), Lumi.Green)
+// ------------------------------------------------------------------------------------ strategy (server ledger)
+
+private data class LedgerStats(val closed: Int, val wins: Int, val losses: Int, val open: Int, val waiting: Int, val cancelled: Int, val total: Double) {
+    val winRate: Double? get() = if (closed > 0) wins * 100.0 / closed else null
+}
+
+private fun ledgerStats(rows: List<LedgerRow>): LedgerStats {
+    val closed = rows.filter { it.closed }
+    return LedgerStats(
+        closed = closed.size,
+        wins = closed.count { (it.pnl ?: 0.0) > 0 },
+        losses = closed.count { (it.pnl ?: 0.0) <= 0 },
+        open = rows.count { it.status == "aktif" },
+        waiting = rows.count { it.status == "menunggu" },
+        cancelled = rows.count { it.status == "batal" },
+        total = closed.sumOf { it.pnl ?: 0.0 },
+    )
+}
+
+@Composable
+private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
+    val day by RadarRepo.day.collectAsStateWithLifecycle()
+    val tier by RadarRepo.tier.collectAsStateWithLifecycle()
+    val ledgers by RadarRepo.ledgers.collectAsStateWithLifecycle()
+    val items by Graph.history.items.collectAsStateWithLifecycle()
+    var jenisIdx by rememberSaveable { mutableIntStateOf(0) }
+    var sel by rememberSaveable { mutableIntStateOf(0) } // 0 = top 5 gabungan, else strategy id
+    var showLegacy by remember { mutableStateOf(false) }
+    LaunchedEffect(tier) { RadarRepo.refreshLedger(tier) }
+    LaunchedEffect(Unit) { if (day == null) runCatching { RadarRepo.refresh() } }
+
+    val jenis = if (jenisIdx == 0) "profit" else "winrate"
+    val ledger = ledgers[tier]
+    val all = ledger?.rows.orEmpty().filter { it.jenis == jenis }
+    val rows = if (sel == 0) all.filter { it.g } else all.filter { !it.g && it.sid == sel }
+    val d = day
+    val strategies = d?.specs?.get(tier)?.get(jenis)?.strategies.orEmpty()
+    val legacy = items.filter { it.source == SOURCE_STRATEGY }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item { TierChips(d, tier) { RadarRepo.setTier(it); sel = 0 } }
+        item { Segmented(listOf("Profit besar", "Winrate tinggi"), jenisIdx, { jenisIdx = it; sel = 0 }) }
+        item {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip("Top 5 gabungan", sel == 0, Lumi.Sky, null) { sel = 0 }
+                strategies.forEach { sp ->
+                    val meta = d?.strategy(sp.id)
+                    val hex = meta?.color ?: "#3D8BFF"
+                    FilterChip(meta?.name ?: "Strategi ${sp.id}", sel == sp.id, com.lumisignal.idx.ui.components.hexColor(hex), Triple(meta?.icon ?: "", hex, jenis)) { sel = sp.id }
                 }
             }
-            if (shown.isEmpty()) {
-                item {
-                    EmptyState(
-                        if (tab == 0) "Belum ada riwayat strategi" else "Porto masih kosong",
-                        if (tab == 0) "Jalankan screening dari Beranda. Lima saham terbaik otomatis masuk ke sini dan dipantau sampai kena TP atau SL."
-                        else "Tekan \"Masukkan Porto\" pada hasil screening untuk saham yang benar-benar kamu beli.",
-                    )
+        }
+        item {
+            val title = if (sel == 0) "Top 5 gabungan" else d?.strategy(sel)?.name ?: "Strategi"
+            LedgerStatsCard(title, ledgerStats(rows), d, tier, jenis, sel)
+        }
+        if (sel == 0 && all.isNotEmpty() && d != null) item { Leaderboard(d, tier, jenis, all) { sel = it } }
+        if (rows.isEmpty()) {
+            item {
+                EmptyState(
+                    "Belum ada hasil",
+                    if (ledger == null) "Riwayat diambil dari server radar. Pastikan internet aktif lalu buka lagi tab ini."
+                    else "Radar live sejak ${Market.prettyDate(ledger.goLive.ifBlank { "2026-10-14" }, false)}. Setiap rekomendasi tercatat otomatis di sini sampai kena TP, SL, atau batas hari.",
+                )
+            }
+        } else {
+            items(rows, key = { "${it.date}-${it.g}-${it.sid}-${it.ticker}" }) { r -> LedgerCard(d, r, jenis) }
+        }
+        if (legacy.isNotEmpty()) {
+            item {
+                GlassCard(Modifier.fillMaxWidth(), padding = 14.dp, onClick = { showLegacy = !showLegacy }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Strategi lama (${legacy.size} sinyal)", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
+                            Text("Sinyal dari 5 strategi bandar sebelum Radar Besok", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        }
+                        Icon(if (showLegacy) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, tint = Lumi.TextMuted)
+                    }
                 }
-            } else {
-                items(shown, key = { it.id }) { sig -> SignalRow(sig) { onOpenSignal(sig.id) } }
+            }
+            if (showLegacy) {
+                item { WinStatsCard("Strategi lama", "Dipantau dengan harga Stockbit", winStats(legacy), Lumi.TextDim) }
+                items(legacy, key = { it.id }) { sig -> SignalRow(sig) { onOpenSignal(sig.id) } }
             }
         }
     }
 }
 
 @Composable
-private fun StrategyLeaderboard(items: List<com.lumisignal.idx.data.Signal>) {
-    com.lumisignal.idx.ui.components.GlassCard(Modifier.fillMaxWidth(), padding = 14.dp) {
+private fun FilterChip(text: String, selected: Boolean, color: Color, badge: Triple<String, String, String>?, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(50))
+            .background(if (selected) color.copy(alpha = 0.22f) else Lumi.Surface)
+            .border(1.dp, if (selected) color else Lumi.Border, RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(start = if (badge != null) 5.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (badge != null) {
+            RadarBadge(badge.first, badge.second, badge.third, 24.dp)
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(text, style = MaterialTheme.typography.labelMedium, color = if (selected) color else Lumi.TextDim, maxLines = 1)
+    }
+}
+
+@Composable
+private fun LedgerStatsCard(title: String, st: LedgerStats, d: RadarDay?, tier: String, jenis: String, sel: Int) {
+    val accent = if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE)
+    GlassCard(Modifier.fillMaxWidth(), accent = accent) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            WinRateRing(st.winRate, accent)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
+                Text("Hasil nyata radar · ${d?.tierLabel(tier) ?: tier}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Pill("${st.wins} menang", Lumi.Green)
+                    Pill("${st.losses} kalah", Lumi.Red)
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile("Selesai", "${st.closed}", Modifier.weight(1f))
+            StatTile("Berjalan", "${st.open + st.waiting}", Modifier.weight(1f), Lumi.Sky)
+            StatTile("Akumulasi P/L", if (st.closed > 0) Fmt.pct(st.total) else "–", Modifier.weight(1.2f), if (st.total >= 0) Lumi.Green else Lumi.Red)
+        }
+        val bt = if (sel == 0) d?.specs?.get(tier)?.get(jenis)?.top5Stats else d?.spec(tier, jenis, sel)?.stats
+        if (bt != null && bt.trades > 0) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Pembanding backtest: winrate ${Fmt.num(bt.winrate)}%, rata-rata ${Fmt.pct(bt.rataPl, decimals = 2)} per transaksi. Akumulasi P/L = jumlah P/L real semua transaksi yang selesai.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun Leaderboard(d: RadarDay, tier: String, jenis: String, all: List<LedgerRow>, onSelect: (Int) -> Unit) {
+    GlassCard(Modifier.fillMaxWidth(), padding = 14.dp) {
         Text("Rapor per strategi", style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
         Spacer(Modifier.height(8.dp))
-        Strategy.entries.forEach { s ->
-            val st = winStats(items.filter { it.strategyId == s.id })
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                com.lumisignal.idx.ui.components.StrategyBadge(s.id, 26.dp)
+        d.specs[tier]?.get(jenis)?.strategies.orEmpty().forEach { sp ->
+            val meta = d.strategy(sp.id)
+            val st = ledgerStats(all.filter { !it.g && it.sid == sp.id })
+            Row(Modifier.fillMaxWidth().clickable { onSelect(sp.id) }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                RadarBadge(meta?.icon ?: "", meta?.color ?: "#3D8BFF", jenis, 28.dp)
                 Spacer(Modifier.width(10.dp))
-                Text(s.tagline, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, modifier = Modifier.weight(1f))
-                Text(
-                    st.winRate?.let { "${it.toInt()}%" } ?: "–",
-                    style = com.lumisignal.idx.ui.theme.NumberStyle, color = Lumi.strategyColor(s.id),
-                )
+                Text(meta?.name ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(st.winRate?.let { "${it.toInt()}%" } ?: "–", style = NumberStyle, color = com.lumisignal.idx.ui.components.hexColor(meta?.color ?: "#3D8BFF"))
                 Spacer(Modifier.width(8.dp))
-                Text("${st.wins}M/${st.losses}K", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+                Text(if (st.closed > 0) Fmt.pct(st.total, decimals = 0) else "${st.open + st.waiting} jalan", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
             }
+        }
+    }
+}
+
+private fun statusColor(r: LedgerRow): Color = when (r.status) {
+    "TP" -> Lumi.Green
+    "SL" -> Lumi.Red
+    "Waktu" -> if ((r.pnl ?: 0.0) > 0) Lumi.Green else Lumi.Amber
+    "aktif" -> Lumi.Blue
+    "menunggu" -> Lumi.Sky
+    else -> Lumi.TextMuted
+}
+
+private fun statusLabel(r: LedgerRow): String = when (r.status) {
+    "TP" -> "TP tercapai"
+    "SL" -> "Stop loss"
+    "Waktu" -> "Jual ${r.hold ?: ""} hari"
+    "aktif" -> "Posisi aktif"
+    "menunggu" -> "Menunggu entry"
+    "batal" -> "Tidak terbeli"
+    else -> r.status
+}
+
+@Composable
+private fun LedgerCard(d: RadarDay?, r: LedgerRow, jenis: String) {
+    val meta = d?.strategy(r.sid)
+    val color = statusColor(r)
+    GlassCard(Modifier.fillMaxWidth(), padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadarBadge(meta?.icon ?: "", meta?.color ?: "#3D8BFF", jenis, 36.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(r.ticker, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
+                    Spacer(Modifier.width(8.dp))
+                    Text("sinyal ${Market.shortDate(r.date)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+                }
+                Text(meta?.name ?: "", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Pill(statusLabel(r), color)
+                r.pnl?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(Fmt.pct(it, decimals = 2), style = NumberStyle.copy(fontSize = 14.sp), color = if (it > 0) Lumi.Green else Lumi.Red)
+                }
+            }
+        }
+        if (r.entry != null) {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MiniLevel("BELI ${r.entryDate?.let { Market.shortDate(it) } ?: ""}", Fmt.price(r.entry), Lumi.Blue, Modifier.weight(1.2f))
+                MiniLevel("TP", Fmt.price(r.tp), Lumi.Green, Modifier.weight(1f))
+                MiniLevel("SL", Fmt.price(r.sl), Lumi.Red, Modifier.weight(1f))
+            }
+            val exitTxt = when {
+                r.exitDate != null && r.exit != null -> "Jual ${Fmt.price(r.exit)} pada ${Market.shortDate(r.exitDate)} · hold ${r.hold ?: "-"} hari"
+                r.status == "aktif" && r.last != null -> "Harga terakhir ${Fmt.price(r.last)} · hari ke-${r.hold ?: "-"}"
+                else -> null
+            }
+            if (exitTxt != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(exitTxt, style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+            }
+        } else if (r.status == "batal") {
+            Spacer(Modifier.height(6.dp))
+            Text("Harga tidak masuk zona beli (≤ closing +1%) di sesi berikutnya, jadi tidak ada transaksi.", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------ portfolio (on device)
+
+@Composable
+private fun PortoHistory(portoItems: List<com.lumisignal.idx.data.Signal>, onOpenSignal: (String) -> Unit) {
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item { WinStatsCard("Portofolio kamu", "Saham yang kamu tandai \"Masukkan Porto\"", winStats(portoItems), Lumi.Green) }
+        if (portoItems.isEmpty()) {
+            item {
+                EmptyState(
+                    "Porto masih kosong",
+                    "Buka sinyal di Radar Besok lalu tekan \"Masukkan Porto\" untuk saham yang benar-benar kamu beli. Lumi memantaunya dengan harga Stockbit sampai kena TP, SL, atau batas hari.",
+                )
+            }
+        } else {
+            items(portoItems, key = { it.id }) { sig -> SignalRow(sig) { onOpenSignal(sig.id) } }
         }
     }
 }
@@ -163,21 +357,8 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mod
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) Color.White else Lumi.TextDim)
+                Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) Color.White else Lumi.TextDim, maxLines = 1)
             }
         }
-    }
-}
-
-@Composable
-private fun Chip(text: String, selected: Boolean, color: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.clip(RoundedCornerShape(50))
-            .background(if (selected) color.copy(alpha = 0.22f) else Lumi.Surface)
-            .border(1.dp, if (selected) color else Lumi.Border, RoundedCornerShape(50))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        Text(text, style = MaterialTheme.typography.labelMedium, color = if (selected) color else Lumi.TextDim)
     }
 }

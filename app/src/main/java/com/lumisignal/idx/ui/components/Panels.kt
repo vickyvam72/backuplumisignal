@@ -119,7 +119,7 @@ fun ChecksPanel(checks: List<Check>, kind: String, modifier: Modifier = Modifier
                             Text("BONUS", style = MaterialTheme.typography.labelSmall, color = Lumi.Amber)
                         }
                     }
-                    Text(c.detail, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                    if (c.detail.isNotBlank()) Text(c.detail, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 }
             }
         }

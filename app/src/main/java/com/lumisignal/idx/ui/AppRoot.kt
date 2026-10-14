@@ -53,10 +53,10 @@ import com.lumisignal.idx.ui.components.LumiBackground
 import com.lumisignal.idx.ui.screens.HistoryScreen
 import com.lumisignal.idx.ui.screens.HomeScreen
 import com.lumisignal.idx.ui.screens.LoginFlow
-import com.lumisignal.idx.ui.screens.ManualDetailScreen
 import com.lumisignal.idx.ui.screens.ManualScreen
 import com.lumisignal.idx.ui.screens.PermissionScreen
-import com.lumisignal.idx.ui.screens.ScanScreen
+import com.lumisignal.idx.ui.screens.RadarPickScreen
+import com.lumisignal.idx.ui.screens.RadarScreen
 import com.lumisignal.idx.ui.screens.SettingsScreen
 import com.lumisignal.idx.ui.screens.SignalDetailScreen
 import com.lumisignal.idx.ui.theme.Lumi
@@ -104,8 +104,23 @@ private fun MainNav() {
     }
     NavHost(nav, startDestination = "tabs", modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         composable("tabs") { TabsScreen(nav) }
-        composable("scan") {
-            ScanScreen(onBack = { nav.popBackStack() }, onOpenSignal = { nav.navigate("detail/$it") })
+        val openPick: (String, String, Int, String, Boolean) -> Unit = { tier, jenis, sid, ticker, g ->
+            nav.navigate("pick/$tier/$jenis/$sid/$ticker/${if (g) 1 else 0}")
+        }
+        composable("radar") {
+            RadarScreen(onBack = { nav.popBackStack() }, onOpenPick = openPick)
+        }
+        composable("pick/{tier}/{jenis}/{sid}/{ticker}/{g}") { entry ->
+            val a = entry.arguments
+            RadarPickScreen(
+                tier = a?.getString("tier") ?: "1M",
+                jenis = a?.getString("jenis") ?: "profit",
+                sid = a?.getString("sid")?.toIntOrNull() ?: 0,
+                ticker = a?.getString("ticker") ?: "",
+                combined = a?.getString("g") == "1",
+                onBack = { nav.popBackStack() },
+                onOpenSignal = { nav.navigate("detail/$it") },
+            )
         }
         composable("detail/{id}") { entry ->
             SignalDetailScreen(entry.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() })
@@ -114,11 +129,8 @@ private fun MainNav() {
             ManualScreen(
                 entry.arguments?.getString("symbol") ?: "",
                 onBack = { nav.popBackStack() },
-                onOpenStrategy = { nav.navigate("manualDetail/$it") },
+                onOpenPick = openPick,
             )
-        }
-        composable("manualDetail/{sid}") { entry ->
-            ManualDetailScreen(entry.arguments?.getString("sid")?.toIntOrNull() ?: 1, onBack = { nav.popBackStack() })
         }
     }
 }
@@ -129,7 +141,7 @@ private fun TabsScreen(nav: NavHostController) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> HomeScreen(onOpenScan = { nav.navigate("scan") { launchSingleTop = true } }, onManual = { nav.navigate("manual/$it") })
+                0 -> HomeScreen(onOpenRadar = { nav.navigate("radar") { launchSingleTop = true } }, onManual = { nav.navigate("manual/$it") })
                 1 -> HistoryScreen(onOpenSignal = { nav.navigate("detail/$it") })
                 else -> SettingsScreen()
             }

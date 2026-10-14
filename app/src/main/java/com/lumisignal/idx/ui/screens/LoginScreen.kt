@@ -96,7 +96,7 @@ private fun WelcomeScreen(reason: String?, onConnect: () -> Unit) {
             Text("Lumi Signal IDX", style = MaterialTheme.typography.headlineMedium, color = Lumi.Text)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Radar sinyal beli saham Indonesia dari jejak bandar & candle penutupan.",
+                "Radar sinyal beli saham Indonesia untuk sesi besok, dari closing hari ini.",
                 style = MaterialTheme.typography.bodyLarge, color = Lumi.TextDim, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(30.dp))
@@ -106,7 +106,7 @@ private fun WelcomeScreen(reason: String?, onConnect: () -> Unit) {
                 }
                 Spacer(Modifier.height(14.dp))
             }
-            Feature(Icons.Filled.Search, "5 strategi screening", "Dari closing kuat sampai gorengan bangun — tiap sinyal lengkap dengan entry, SL & TP.")
+            Feature(Icons.Filled.Search, "Radar Besok", "Semua strategi hasil backtest langsung tampil sekali buka — tiap sinyal lengkap dengan batas beli, TP & SL.")
             Feature(Icons.Filled.Star, "Bukti yang transparan", "Lihat broker mana yang akumulasi dan chart teknikal di balik setiap sinyal.")
             Feature(Icons.Filled.Notifications, "Pemantauan otomatis", "Notifikasi saat harga menyentuh entry, take profit, atau stop loss.")
             Spacer(Modifier.height(26.dp))

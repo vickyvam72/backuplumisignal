@@ -117,6 +117,13 @@ def main():
             for v in bars:
                 d = time.strftime("%Y-%m-%d", time.gmtime(float(v[0]) + 7 * 3600))
                 rows.append((d, t, v[1], v[2], v[3], v[4], v[5] if len(v) > 5 else ""))
+    # While the exchange is still trading, today's bar is not final: keep completed sessions only.
+    wib = time.gmtime(time.time() + 7 * 3600)
+    today = time.strftime("%Y-%m-%d", wib)
+    if wib.tm_hour * 60 + wib.tm_min < 16 * 60 + 20:
+        before = len(rows)
+        rows = [r for r in rows if r[0] < today]
+        print(f"session {today} not final yet: dropped {before - len(rows)} running bars", flush=True)
     kept = 0
     if empty and args.cache:
         try:
@@ -124,7 +131,7 @@ def main():
             with opener(args.cache, "rt") as f:
                 miss = set(empty)
                 for r in csv.DictReader(f):
-                    if r["ticker"] in miss:
+                    if r["ticker"] in miss and r["date"] < today:
                         rows.append((r["date"], r["ticker"], r["open"], r["high"], r["low"], r["close"], r["volume"]))
                         kept += 1
         except FileNotFoundError:

@@ -101,6 +101,10 @@ data class TradePlan(
     @SerialName("tp1") val tp: Double,
     @SerialName("tp1Reason") val tpReason: String,
     val maxHoldDays: Int = 10,
+    /** Radar signals: TP/SL are rebuilt from the real entry price with this rule. */
+    val rule: ExitRule? = null,
+    /** Sessions the buy order stays valid (radar: only the first session after the signal). */
+    val entrySessions: Int = 2,
 )
 
 @Serializable
@@ -164,6 +168,8 @@ data class Signal(
     val exitDate: String? = null,
     val lastPrice: Double? = null,
     val lastUpdate: Long = 0L,
+    /** Set for portfolio entries taken from the Radar Besok screening. */
+    val radar: RadarTag? = null,
 ) {
     val isOpen: Boolean
         get() = status == SignalStatus.WAITING || status == SignalStatus.ACTIVE

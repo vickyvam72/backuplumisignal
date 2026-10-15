@@ -111,8 +111,14 @@ object RadarPorto {
     }
 
     fun add(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick, combined: Boolean, customEntry: Double?): Signal {
-        val tracked = Tracker.track(build(day, tier, jenis, sid, pick, combined, SOURCE_PORTO, customEntry))
+        // Start from the strategy entry's latest price (the pick's close may be a day old).
+        val k = key(day.date, tier, jenis, sid, pick.ticker, combined)
+        val strat = Graph.history.items.value.firstOrNull { it.id == k }
+        var sig = build(day, tier, jenis, sid, pick, combined, SOURCE_PORTO, customEntry)
+        if (strat != null) sig = sig.copy(lastPrice = strat.live?.last ?: strat.lastPrice ?: sig.lastPrice)
+        val tracked = Tracker.track(sig)
         Graph.history.upsert(listOf(tracked))
+        com.lumisignal.idx.service.Monitor.runNow(Graph.context)
         return tracked
     }
 
@@ -173,6 +179,7 @@ object RadarPorto {
         )
         val tracked = Tracker.track(sig)
         Graph.history.upsert(listOf(tracked))
+        com.lumisignal.idx.service.Monitor.runNow(Graph.context)
         return tracked
     }
 

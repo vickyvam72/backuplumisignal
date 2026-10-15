@@ -26,6 +26,10 @@ object Market {
     fun now(): ZonedDateTime = ZonedDateTime.now(ZONE)
     fun today(): String = now().toLocalDate().format(ISO)
 
+    /** WIB calendar day of an epoch-millis timestamp. */
+    fun dayOf(millis: Long): String =
+        java.time.Instant.ofEpochMilli(millis).atZone(ZONE).toLocalDate().format(ISO)
+
     fun isWeekday(d: LocalDate = now().toLocalDate()): Boolean =
         d.dayOfWeek != DayOfWeek.SATURDAY && d.dayOfWeek != DayOfWeek.SUNDAY
 

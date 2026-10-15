@@ -36,6 +36,7 @@ object Scanner {
         )
         val tracked = Tracker.track(porto)
         Graph.history.upsert(listOf(tracked))
+        com.lumisignal.idx.service.Monitor.runNow(Graph.context)
         return tracked
     }
 

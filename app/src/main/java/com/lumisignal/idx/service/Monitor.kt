@@ -45,7 +45,10 @@ object Monitor {
     }
 
     fun runNow(ctx: Context) {
-        WorkManager.getInstance(ctx).enqueue(OneTimeWorkRequestBuilder<MonitorWorker>().build())
+        try {
+            WorkManager.getInstance(ctx).enqueue(OneTimeWorkRequestBuilder<MonitorWorker>().build())
+        } catch (e: Exception) {
+        }
     }
 
     /**
@@ -68,7 +71,9 @@ object Monitor {
         val inSession = Market.sessionInProgress(now)
         val key = today + if (inSession) "-s" else "-c"
         // Outside trading hours one fetch per day is enough; during the session fetch every pass.
-        if (!inSession && !forceDaily && Graph.cache.lastDailyKey == key) return 0
+        // A position added after that fetch (never updated yet, or last updated before today) still gets one.
+        val allFresh = targets.all { it.lastUpdate > 0 && Market.dayOf(it.lastUpdate) == today }
+        if (!inSession && !forceDaily && Graph.cache.lastDailyKey == key && allFresh) return 0
 
         val pages = mutableMapOf<String, List<Bar>>()
         for (sym in targets.map { it.symbol }.distinct()) {
@@ -118,6 +123,11 @@ object Monitor {
                     s = s.copy(dayPaths = s.dayPaths + (today to path))
                     tracked = Tracker.track(s)
                 }
+            }
+            // Latest traded price, also for a position opened today after the bars it is tracked on.
+            val lastBar = page?.lastOrNull()
+            if (tracked.isOpen && lastBar != null && lastBar.date >= (tracked.entryDate ?: sig.refDate)) {
+                tracked = tracked.copy(lastPrice = lastBar.close)
             }
             tracked = tracked.copy(lastUpdate = System.currentTimeMillis())
             if (tracked.status != sig.status || tracked.exitPrice != sig.exitPrice) {

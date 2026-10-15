@@ -105,7 +105,7 @@ class ScreensTest {
         val fake = (0 until 30).map { i ->
             val st = statuses[i % statuses.size]
             val sig = "2026-09-%02d".format(1 + i % 28)
-            share.ReportRow(
+            com.lumisignal.idx.share.ShareCards.ReportRow(
                 ticker = listOf("SMGA", "CUAN", "BBCA", "TRIN", "KOTA", "BAIK")[i % 6], signal = sig,
                 buy = if (st == "Menunggu" || st == "Batal") null else sig,
                 sell = if (st in listOf("TP", "SL", "Waktu")) "2026-09-%02d".format(minOf(28, 3 + i % 28)) else null,
@@ -114,7 +114,7 @@ class ScreensTest {
                 pnl = when (st) { "TP" -> 8.33; "SL" -> -7.5; "Waktu" -> 1.2; "Hold" -> 2.0; else -> null }, status = st,
             )
         }
-        share.reportPages(ctx, share.Report("Backtest", "profit", "September 2026", fake))
+        share.reportPages(ctx, com.lumisignal.idx.share.ShareCards.Report("Backtest", "profit", "September 2026", fake))
             .forEachIndexed { i, b -> save("14-share-laporan-${i + 1}", b) }
     }
 }

@@ -496,7 +496,9 @@ object ShareCards {
                     val rect = RectF(left, y, left + tw, y + th)
                     pen.round(rect, 26f, alpha(color, 0.12f), alpha(color, 0.5f))
                     pen.text(label, left + 22f, y + 24f, pen.paint(22f, color, bold = true))
-                    val vp = pen.paint(if (value.length > 7) 40f else 54f, TEXT, bold = true, num = true)
+                    var size = 54f
+                    var vp = pen.paint(size, TEXT, bold = true, num = true)
+                    while (vp.measureText(value) > tw - 40f && size > 24f) { size -= 2f; vp = pen.paint(size, TEXT, bold = true, num = true) }
                     pen.text(value, left + 22f, y + 64f, vp)
                 }
                 y += th + 16f
@@ -534,7 +536,7 @@ object ShareCards {
                     Market.shortDate(RadarPorto.nextSession(row.signal)),
                     row.buy?.let { Market.shortDate(it) } ?: if (row.status == "Batal") "batal" else "–",
                     row.sell?.let { Market.shortDate(it) } ?: if (row.status == "Hold") "hold" else "–",
-                    row.hold?.let { "${it}h" } ?: "–",
+                    row.hold?.let { "$it hr" } ?: "–",
                     Fmt.price(row.tp),
                     Fmt.price(row.sl),
                     row.pnl?.let { Fmt.pct(it, decimals = 2) } ?: "–",

@@ -227,7 +227,7 @@ fun TradeTimeline(signal: String, buy: String?, sell: String?, hold: Int?, pendi
             Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
             TimelineCell("BELI", buy?.let { Market.shortDate(it) } ?: (if (pending == "batal") "tidak terbeli" else pending ?: "–"), Lumi.Blue, Modifier.weight(1f))
             Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
-            TimelineCell("JUAL", sell?.let { Market.shortDate(it) } ?: (if (buy != null) pending ?: "–" else "–"), Lumi.Green, Modifier.weight(1f))
+            TimelineCell("JUAL", sell?.takeIf { buy != null }?.let { Market.shortDate(it) } ?: "–", Lumi.Green, Modifier.weight(1f))
             Column(Modifier.width(62.dp), horizontalAlignment = Alignment.End) {
                 Text("HOLD", style = MaterialTheme.typography.labelSmall, color = Lumi.Amber)
                 Text(hold?.let { "$it hari" } ?: "–", style = NumberStyle.copy(fontSize = 13.sp), color = Lumi.Text)

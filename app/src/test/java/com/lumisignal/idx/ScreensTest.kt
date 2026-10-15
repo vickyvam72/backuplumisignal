@@ -71,12 +71,13 @@ class ScreensTest {
                         5 -> HistoryScreen(onOpenSignal = {})
                         6 -> CekSahamScreen(onOpenPick = { _, _, _, _, _ -> }, onOpenSignal = {}, initialSymbol = p.ticker)
                         7 -> SignalDetailScreen(porto.id, onBack = {})
-                        else -> com.lumisignal.idx.ui.screens.BacktestScreen()
+                        8 -> com.lumisignal.idx.ui.screens.BacktestScreen()
+                        else -> com.lumisignal.idx.ui.screens.PermissionScreen(onDone = {})
                     }
                 }
             }
         }
-        val names = listOf("1-home-awal", "2-setup", "3-setup-siap", "4-beranda-sinyal", "5-pick", "6-riwayat", "7-cek-saham", "8-porto", "9-backtest")
+        val names = listOf("1-home-awal", "2-setup", "3-setup-siap", "4-beranda-sinyal", "5-pick", "6-riwayat", "7-cek-saham", "8-porto", "9-backtest", "10-izin")
         for (i in names.indices) {
             if (i == 3) {
                 RadarRepo.setupDone = true

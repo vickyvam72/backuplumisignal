@@ -12,6 +12,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -136,6 +138,7 @@ fun PermissionScreen(onDone: () -> Unit) {
     val ctx = LocalContext.current
     var notif by remember { mutableStateOf(Perms.notifications(ctx)) }
     var bg by remember { mutableStateOf(Perms.background(ctx)) }
+    var autoOpened by remember { mutableStateOf(false) }
     var notifAsked by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notif = granted || Perms.notifications(ctx)
@@ -146,88 +149,74 @@ fun PermissionScreen(onDone: () -> Unit) {
         bg = Perms.background(ctx)
     }
 
+    // One screen, no scrolling: compact rows and the button pinned to the bottom.
     LumiBackground {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-                .verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
-        ) {
-            Spacer(Modifier.height(36.dp))
-            LumiLogo(56.dp)
-            Spacer(Modifier.height(18.dp))
-            Text("Satu langkah lagi", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Lumi memantau harga sinyal kamu di latar belakang dan memberi tahu saat harga menyentuh entry, take profit, atau stop loss. Untuk itu dua izin ini wajib diaktifkan.",
-                style = MaterialTheme.typography.bodyMedium, color = Lumi.TextDim,
-            )
-            Spacer(Modifier.height(22.dp))
-
-            PermCard(
-                icon = Icons.Filled.Notifications,
-                title = "Izinkan notifikasi",
-                body = "Supaya kamu langsung tahu saat sinyal masuk entry, kena TP, atau kena SL.",
-                granted = notif,
-            ) {
-                if (Build.VERSION.SDK_INT >= 33 && !notifAsked) {
-                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    Perms.openAppSettings(ctx)
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LumiLogo(44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Satu langkah lagi", style = MaterialTheme.typography.titleLarge, color = Lumi.Text)
+                    Text("Supaya sinyal & audit harga jalan otomatis", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            PermCard(
-                icon = Icons.Filled.Refresh,
-                title = "Izinkan berjalan di latar belakang",
-                body = "Mengecualikan Lumi dari penghemat baterai agar pemantauan harga tetap jalan walau aplikasi ditutup.",
-                granted = bg,
-            ) { Perms.requestBackground(ctx) }
-
-            Spacer(Modifier.height(16.dp))
-            GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Amber, padding = 14.dp) {
-                Text("Pengguna Xiaomi, Oppo, Vivo, Realme & Infinix", style = MaterialTheme.typography.titleSmall, color = Lumi.Amber)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Aktifkan juga \"Autostart\" / \"Mulai otomatis di latar belakang\" untuk Lumi Signal IDX, karena sistem HP tersebut sering menutup aplikasi di latar belakang. Tombol di bawah membuka daftar autostart; nyalakan Lumi Signal IDX di sana.",
-                    style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
-                )
-                Spacer(Modifier.height(10.dp))
-                GhostButton("Buka Autostart", { Perms.openAutostart(ctx) }, color = Lumi.Amber)
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Lumi memantau harga di latar belakang dan memberi notifikasi saat sinyal beli terbit (17.00 WIB) serta saat harga menyentuh entry, TP, atau SL.",
+                style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+            )
+            Spacer(Modifier.height(14.dp))
+            PermRow(Icons.Filled.Notifications, "Notifikasi", "Kabar sinyal beli, entry, TP & SL", notif, "Izinkan") {
+                if (Build.VERSION.SDK_INT >= 33 && !notifAsked) launcher.launch(Manifest.permission.POST_NOTIFICATIONS) else Perms.openAppSettings(ctx)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(10.dp))
+            PermRow(Icons.Filled.Refresh, "Penghemat baterai", "Kecualikan Lumi agar audit tetap jalan", bg, "Izinkan") { Perms.requestBackground(ctx) }
+            Spacer(Modifier.height(10.dp))
+            PermRow(
+                Icons.Filled.PlayArrow, "Autostart / Mulai otomatis", "Xiaomi, Oppo, Vivo, Realme, Infinix: nyalakan Lumi Signal IDX",
+                autoOpened, "Buka", doneText = "Dibuka",
+            ) { autoOpened = true; Perms.openAutostart(ctx) }
+            Spacer(Modifier.weight(1f))
+            Text(
+                "Autostart wajib di HP yang punya menu itu; di HP lain lewati saja.",
+                style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
+            )
+            Spacer(Modifier.height(10.dp))
             GradientButton(
-                if (notif && bg) "Lanjut ke Dashboard" else "Aktifkan kedua izin dulu",
+                if (notif && bg) "Lanjut" else "Aktifkan notifikasi & baterai dulu",
                 onClick = onDone,
                 enabled = notif && bg,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(30.dp))
         }
     }
 }
 
 @Composable
-private fun PermCard(icon: ImageVector, title: String, body: String, granted: Boolean, onRequest: () -> Unit) {
+private fun PermRow(icon: ImageVector, title: String, body: String, granted: Boolean, action: String, doneText: String = "Aktif", onRequest: () -> Unit) {
     val accent: Color = if (granted) Lumi.Green else Lumi.Blue
-    GlassCard(Modifier.fillMaxWidth(), accent = accent) {
+    GlassCard(Modifier.fillMaxWidth(), accent = accent, padding = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.16f)),
+                Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(if (granted) Icons.Filled.CheckCircle else icon, null, tint = accent, modifier = Modifier.size(22.dp))
+                Icon(if (granted) Icons.Filled.CheckCircle else icon, null, tint = accent, modifier = Modifier.size(20.dp))
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
-                Text(body, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Text(title, style = MaterialTheme.typography.titleSmall, color = Lumi.Text, maxLines = 1)
+                Text(body, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 2)
             }
-        }
-        if (!granted) {
-            Spacer(Modifier.height(12.dp))
-            GradientButton("Izinkan", onRequest, Modifier.fillMaxWidth())
-        } else {
-            Spacer(Modifier.height(8.dp))
-            Text("✓ Sudah diizinkan", style = MaterialTheme.typography.labelMedium, color = Lumi.Green)
+            Spacer(Modifier.width(8.dp))
+            if (granted) {
+                Text("✓ $doneText", style = MaterialTheme.typography.labelMedium, color = Lumi.Green)
+            } else {
+                Box(
+                    Modifier.clip(RoundedCornerShape(12.dp)).background(Lumi.ButtonGradient).clickable(onClick = onRequest)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) { Text(action, style = MaterialTheme.typography.labelLarge, color = Color.White) }
+            }
         }
     }
 }

@@ -24,6 +24,24 @@ object RadarPorto {
         return Graph.history.items.value.firstOrNull { it.source == SOURCE_PORTO && it.linkedId == k }
     }
 
+    /** Price + % shown next to a pick: P/L once bought, today's move while waiting, else the signal day's close. */
+    data class Quote(val label: String, val pct: Double, val price: Double)
+
+    fun quote(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick, combined: Boolean): Quote {
+        val k = key(day.date, tier, jenis, sid, pick.ticker, combined)
+        val items = Graph.history.items.value
+        val sig = items.firstOrNull { it.id == k } ?: items.firstOrNull { it.source == SOURCE_PORTO && it.linkedId == k }
+        val pnl = sig?.pnlPct
+        if (sig != null && sig.entryPrice != null && pnl != null) {
+            return Quote("P/L", pnl, sig.exitPrice ?: sig.lastPrice ?: sig.entryPrice)
+        }
+        val live = sig?.live
+        if (live != null && live.date > day.date && pick.close > 0) {
+            return Quote("Hari ini", (live.last / pick.close - 1) * 100, live.last)
+        }
+        return Quote("Closing", pick.chg, pick.close)
+    }
+
     fun plan(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick): TradePlan {
         val spec = day.spec(tier, jenis, sid)
         val top = pick.entryHigh

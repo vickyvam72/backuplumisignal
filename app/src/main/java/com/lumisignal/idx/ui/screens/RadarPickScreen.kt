@@ -116,12 +116,13 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
                     ) { Text("#${pick.rank}", style = NumberStyle.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = accent) }
                 }
                 Spacer(Modifier.height(14.dp))
+                val q = remember(items, d.date, ticker) { RadarPorto.quote(d, tier, jenis, sid, pick, combined) }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(Fmt.price(pick.close), style = NumberStyle.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
+                    Text(Fmt.price(q.price), style = NumberStyle.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        Fmt.pct(pick.chg), style = NumberStyle.copy(fontSize = 17.sp),
-                        color = if (pick.chg >= 0) Lumi.Green else Lumi.Red, modifier = Modifier.padding(bottom = 5.dp),
+                        "${q.label} ${Fmt.pct(q.pct)}", style = NumberStyle.copy(fontSize = 17.sp),
+                        color = if (q.pct >= 0) Lumi.Green else Lumi.Red, modifier = Modifier.padding(bottom = 5.dp),
                     )
                 }
                 Spacer(Modifier.height(8.dp))

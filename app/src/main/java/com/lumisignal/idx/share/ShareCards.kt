@@ -371,7 +371,7 @@ object ShareCards {
             pen.text(sig.entryDate?.let { Market.prettyDate(it) } ?: if (sig.status == SignalStatus.CANCELLED) "Tidak terbeli" else "Belum terbeli",
                 PAD + 40f, y + 76f, pen.paint(34f, TEXT, bold = true))
             pen.text("TANGGAL JUAL", PAD + half + 30f, y + 34f, pen.paint(26f, GREEN, bold = true))
-            pen.text(sig.exitDate?.takeIf { sig.entryDate != null }?.let { Market.prettyDate(it) } ?: if (sig.isOpen) "Masih dipegang" else "–",
+            pen.text(sig.exitDate?.takeIf { sig.entryDate != null }?.let { Market.prettyDate(it) } ?: "–",
                 PAD + half + 30f, y + 76f, pen.paint(34f, TEXT, bold = true))
             pen.c.drawLine(PAD + half, y + 34f, PAD + half, y + boxH - 34f, Paint().apply { color = BORDER; strokeWidth = 2f })
             val hold = sig.holdDays?.takeIf { sig.entryDate != null }
@@ -451,8 +451,8 @@ object ShareCards {
 
     /** Column x positions (left edges) and widths of the trade table. */
     private val COLS = listOf(
-        "KODE" to 150f, "SINYAL*" to 118f, "BELI" to 112f, "JUAL" to 112f, "HOLD" to 82f,
-        "TP" to 112f, "SL" to 112f, "P/L" to 138f,
+        "KODE" to 172f, "BELI" to 132f, "JUAL" to 132f, "HOLD" to 100f,
+        "TP" to 130f, "SL" to 130f, "P/L" to 140f,
     )
 
     /** The report as one or more pages (pictures) of the same size. */
@@ -533,9 +533,8 @@ object ShareCards {
                 val ty = y + 14f
                 val cells = listOf(
                     row.ticker,
-                    Market.shortDate(RadarPorto.nextSession(row.signal)),
                     row.buy?.let { Market.shortDate(it) } ?: if (row.status == "Batal") "batal" else "–",
-                    row.sell?.let { Market.shortDate(it) } ?: if (row.status == "Hold") "hold" else "–",
+                    row.sell?.let { Market.shortDate(it) } ?: "–",
                     row.hold?.let { "$it hr" } ?: "–",
                     Fmt.price(row.tp),
                     Fmt.price(row.sl),
@@ -546,12 +545,12 @@ object ShareCards {
                     val (_, w) = COLS[k]
                     val paint = when (k) {
                         0 -> pen.paint(30f, TEXT, bold = true, num = true)
-                        7 -> pen.paint(28f, row.pnl?.let { if (it >= 0) GREEN else RED } ?: MUTED, bold = true, num = true, align = Paint.Align.RIGHT)
-                        5 -> pen.paint(26f, GREEN, num = true)
-                        6 -> pen.paint(26f, RED, num = true)
-                        else -> pen.paint(25f, DIM, num = k == 4)
+                        6 -> pen.paint(28f, row.pnl?.let { if (it >= 0) GREEN else RED } ?: MUTED, bold = true, num = true, align = Paint.Align.RIGHT)
+                        4 -> pen.paint(26f, GREEN, num = true)
+                        5 -> pen.paint(26f, RED, num = true)
+                        else -> pen.paint(25f, DIM, num = k == 3)
                     }
-                    pen.text(v, if (k == 7) cx + w - 8f else cx, ty + if (k == 0 || k == 7) 0f else 3f, paint)
+                    pen.text(v, if (k == 6) cx + w - 8f else cx, ty + if (k == 0 || k == 6) 0f else 3f, paint)
                     cx += w
                 }
                 y += ROW_H
@@ -564,7 +563,7 @@ object ShareCards {
                 lx = pen.text(lab, lx + 16f, y + 4f, pen.paint(22f, DIM)).let { lx + 16f + pen.paint(22f, DIM).measureText(lab) + 26f }
             }
             y += 50f
-            y = pen.block("*Sinyal = tanggal sesi beli yang dituju sinyal (dihitung dari closing hari bursa sebelumnya). P/L dari harga beli ke harga jual, tanpa fee; akumulasi hanya transaksi yang sudah selesai.",
+            y = pen.block("P/L dari harga beli ke harga jual, tanpa fee; akumulasi hanya transaksi yang sudah selesai.",
                 PAD, y, (W - 2 * PAD).toInt(), pen.paint(22f, MUTED))
             y += 20f
             if (pages > 1) y = pen.text("Halaman ${page + 1} dari $pages", PAD, y, pen.paint(26f, SKY, bold = true)) + 10f

@@ -561,7 +561,8 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(p.ticker, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
                     Spacer(Modifier.width(6.dp))
-                    Text(Fmt.pct(p.chg), style = NumberStyle.copy(fontSize = 12.sp), color = if (p.chg >= 0) Lumi.Green else Lumi.Red)
+                    val q = remember(items, d.date, p.ticker) { RadarPorto.quote(d, tier, jenis, sid, p, combined) }
+                    Text("${q.label} ${Fmt.pct(q.pct)}", style = NumberStyle.copy(fontSize = 12.sp), color = if (q.pct >= 0) Lumi.Green else Lumi.Red)
                     if (inPorto) {
                         Spacer(Modifier.width(6.dp))
                         Pill("Porto", Lumi.Green)

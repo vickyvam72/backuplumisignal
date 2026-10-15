@@ -81,6 +81,48 @@ object Perms {
         }
     }
 
+    /** Phone makers' own "autostart / mulai otomatis" pages (not the battery saver). */
+    private val AUTOSTART = listOf(
+        // Xiaomi / Redmi / POCO (MIUI, HyperOS)
+        "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
+        // OPPO / realme / OnePlus (ColorOS, realme UI, OxygenOS)
+        "com.coloros.safecenter" to "com.coloros.safecenter.startupapp.StartupAppListActivity",
+        "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+        "com.oplus.safecenter" to "com.oplus.safecenter.startupapp.view.StartupAppListActivity",
+        "com.oplus.safecenter" to "com.oplus.safecenter.startupapp.StartupAppListActivity",
+        "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+        "com.coloros.safecenter" to "com.coloros.privacypermissionsentry.PermissionTopActivity",
+        // vivo / iQOO
+        "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+        "com.iqoo.secure" to "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager",
+        "com.iqoo.secure" to "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity",
+        // Huawei / Honor
+        "com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+        "com.huawei.systemmanager" to "com.huawei.systemmanager.optimize.process.ProtectActivity",
+        "com.hihonor.systemmanager" to "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+        // Infinix / Tecno / itel
+        "com.transsion.phonemaster" to "com.cyin.himgr.autostart.AutoStartActivity",
+        // ASUS
+        "com.asus.mobilemanager" to "com.asus.mobilemanager.autostart.AutoStartActivity",
+        "com.asus.mobilemanager" to "com.asus.mobilemanager.entry.FunctionActivity",
+        // Letv
+        "com.letv.android.letvsafe" to "com.letv.android.letvsafe.AutobootManageActivity",
+    )
+
+    /** Opens the autostart list. Falls back to the app's info page when the phone has no such page. */
+    fun openAutostart(ctx: Context): Boolean {
+        for ((pkg, cls) in AUTOSTART) {
+            try {
+                val i = Intent().setClassName(pkg, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(i)
+                return true
+            } catch (e: Exception) {
+            }
+        }
+        openAppSettings(ctx)
+        return false
+    }
+
     fun openAppSettings(ctx: Context) {
         try {
             ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
@@ -145,11 +187,11 @@ fun PermissionScreen(onDone: () -> Unit) {
                 Text("Pengguna Xiaomi, Oppo, Vivo, Realme & Infinix", style = MaterialTheme.typography.titleSmall, color = Lumi.Amber)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Aktifkan juga \"Autostart\" / \"Mulai otomatis\" untuk Lumi Signal di pengaturan aplikasi HP kamu, karena sistem HP tersebut sering menutup aplikasi di latar belakang.",
+                    "Aktifkan juga \"Autostart\" / \"Mulai otomatis di latar belakang\" untuk Lumi Signal IDX, karena sistem HP tersebut sering menutup aplikasi di latar belakang. Tombol di bawah membuka daftar autostart; nyalakan Lumi Signal IDX di sana.",
                     style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
                 )
                 Spacer(Modifier.height(10.dp))
-                GhostButton("Buka pengaturan aplikasi", { Perms.openAppSettings(ctx) }, color = Lumi.Amber)
+                GhostButton("Buka Autostart", { Perms.openAutostart(ctx) }, color = Lumi.Amber)
             }
             Spacer(Modifier.height(24.dp))
             GradientButton(

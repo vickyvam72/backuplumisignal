@@ -206,7 +206,7 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                             style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
                         )
                         Text(tag.name, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
-                        Text("Sinyal closing ${Market.prettyDate(sig.refDate)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        Text("Sinyal beli untuk ${Market.prettyDate(com.lumisignal.idx.engine.RadarPorto.nextSession(sig.refDate))}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -312,7 +312,7 @@ fun AnalysisDetail(
                     Column(Modifier.weight(1f)) {
                         Text(headerTag, style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
                         Text(strategy.title, style = MaterialTheme.typography.titleSmall, color = Lumi.Text)
-                        Text("Closing ${Market.prettyDate(signalDate)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        Text("Sinyal beli untuk ${Market.prettyDate(com.lumisignal.idx.engine.RadarPorto.nextSession(signalDate))}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                     }
                     ScoreRing(eval.score, accent, 56.dp)
                 }

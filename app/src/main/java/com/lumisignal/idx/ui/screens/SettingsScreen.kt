@@ -116,6 +116,8 @@ fun SettingsScreen() {
                     if (!bg) Perms.requestBackground(ctx) else Perms.openAppSettings(ctx)
                 }, Modifier.fillMaxWidth(), color = Lumi.Amber)
             }
+            Spacer(Modifier.height(8.dp))
+            GhostButton("Buka Autostart (Mulai otomatis)", { Perms.openAutostart(ctx) }, Modifier.fillMaxWidth(), color = Lumi.Sky)
         }
         Spacer(Modifier.height(16.dp))
 

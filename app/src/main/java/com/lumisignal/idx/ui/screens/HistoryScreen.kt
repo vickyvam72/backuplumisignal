@@ -100,6 +100,8 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
     var jenisIdx by rememberSaveable { mutableIntStateOf(if (RadarRepo.jenis == "winrate") 1 else 0) }
     var sel by rememberSaveable { mutableIntStateOf(0) } // 0 = top 5 gabungan, else strategy id
     var showLegacy by remember { mutableStateOf(false) }
+    var shareDialog by remember { mutableStateOf(false) }
+    val ctx = LocalContext.current
     LaunchedEffect(Unit) { if (day == null) runCatching { RadarRepo.refresh() } }
 
     val jenis = if (jenisIdx == 0) "profit" else "winrate"
@@ -132,7 +134,13 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
         }
         item {
             val title = if (sel == 0) UiConfig.TOP5_TITLE else d?.strategy(sel)?.name ?: all.firstOrNull { it.strategyId == sel }?.radar?.name ?: "Strategi"
-            WinStatsCard(title, signalRange(rows), winStats(rows), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE))
+            WinStatsCard(title, "", winStats(rows), if (jenis == "profit") Color(0xFFFF9F43) else Color(0xFF22D3EE))
+        }
+        if (rows.isNotEmpty()) item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Semua saham sejak riwayat dimulai", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted, modifier = Modifier.weight(1f))
+                ShareReportButton("Bagikan", { shareDialog = true })
+            }
         }
         if (UiConfig.SHOW_STRATEGIES && sel == 0 && all.isNotEmpty()) item { Leaderboard(d, jenis, all, strategyIds) { sel = it } }
         if (rows.isEmpty()) {
@@ -163,6 +171,23 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
             }
         }
     }
+    if (shareDialog) {
+        val dates = rows.map { it.refDate }.distinct().sorted()
+        RangeShareDialog(
+            "Bagikan riwayat strategi", dates,
+            count = { a, b -> rows.count { it.refDate in a..b } },
+            onDismiss = { shareDialog = false },
+        ) { a, b ->
+            shareDialog = false
+            val list = rows.filter { it.refDate in a..b }.sortedWith(compareBy<com.lumisignal.idx.data.Signal> { it.refDate }.thenBy { it.symbol })
+            com.lumisignal.idx.share.ShareCards.shareReport(
+                ctx,
+                com.lumisignal.idx.share.ShareCards.Report("Riwayat Strategi", jenis, com.lumisignal.idx.share.ShareCards.periodLabel(a, b),
+                    list.map { com.lumisignal.idx.share.ShareCards.rowOf(it) }),
+                "riwayat-strategi-$jenis-$a-$b",
+            )
+        }
+    }
 }
 
 @Composable
@@ -186,14 +211,6 @@ private fun Leaderboard(d: RadarDay?, jenis: String, all: List<com.lumisignal.id
             }
         }
     }
-}
-
-/** "13 Okt – 20 Okt 2026": the signal dates covered by a list. */
-private fun signalRange(rows: List<com.lumisignal.idx.data.Signal>): String {
-    if (rows.isEmpty()) return "Belum ada sinyal"
-    val a = rows.minOf { it.refDate }
-    val b = rows.maxOf { it.refDate }
-    return if (a == b) "Sinyal ${Market.prettyDate(a, false)}" else "Sinyal ${Market.shortDate(a)} – ${Market.prettyDate(b, false)}"
 }
 
 @Composable
@@ -224,6 +241,26 @@ private fun PortoHistory(portoItems: List<com.lumisignal.idx.data.Signal>, onOpe
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { WinStatsCard("Portofolio kamu", "Saham yang kamu tandai \"Masukkan Porto\"", winStats(portoItems), Lumi.Green) }
+        if (portoItems.isNotEmpty()) item {
+            val ctx = LocalContext.current
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${portoItems.size} saham di porto", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted, modifier = Modifier.weight(1f))
+                ShareReportButton("Bagikan semua", {
+                    val list = portoItems.sortedWith(compareBy<com.lumisignal.idx.data.Signal> { it.refDate }.thenBy { it.symbol })
+                    val jenisSet = list.mapNotNull { it.radar?.jenis }.toSet()
+                    com.lumisignal.idx.share.ShareCards.shareReport(
+                        ctx,
+                        com.lumisignal.idx.share.ShareCards.Report(
+                            "Riwayat Portofolio", jenisSet.singleOrNull().takeIf { list.all { it.radar != null } },
+                            com.lumisignal.idx.share.ShareCards.periodLabel(list.first().refDate, list.last().refDate),
+                            list.map { com.lumisignal.idx.share.ShareCards.rowOf(it) },
+                            tag = "Semua posisi porto",
+                        ),
+                        "riwayat-porto",
+                    )
+                })
+            }
+        }
         if (portoItems.isEmpty()) {
             item {
                 EmptyState(

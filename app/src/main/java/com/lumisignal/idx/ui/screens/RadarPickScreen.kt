@@ -108,7 +108,7 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
                             style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted,
                         )
                         Text(meta?.name ?: "Strategi $sid", style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                        Text("Sinyal closing ${Market.prettyDate(d.date)}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                        Text("Sinyal beli untuk ${Market.prettyDate(RadarPorto.nextSession(d.date))}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                     }
                     Box(
                         Modifier.size(44.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)).border(1.dp, accent.copy(alpha = 0.5f), CircleShape),
@@ -161,7 +161,7 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
             }
 
             GlassCard(Modifier.fillMaxWidth(), accent = accent) {
-                SectionHeader("Kenapa masuk radar", subtitle = "Semua syarat strategi terpenuhi di closing ${Market.shortDate(d.date)}")
+                SectionHeader("Kenapa masuk radar", subtitle = "Semua syarat strategi terpenuhi · beli ${Market.shortDate(RadarPorto.nextSession(d.date))}")
                 Spacer(Modifier.height(8.dp))
                 pick.why.forEach { WhyRow(it) }
                 spec?.let {

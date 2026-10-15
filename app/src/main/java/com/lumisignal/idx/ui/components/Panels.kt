@@ -280,7 +280,7 @@ fun WinStatsCard(title: String, subtitle: String, stats: WinStats, accent: Color
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = Lumi.Text)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill("${stats.wins} menang", Lumi.Green)

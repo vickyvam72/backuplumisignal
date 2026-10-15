@@ -344,7 +344,7 @@ private fun RadarCheck(day: RadarDay?, symbol: String, info: StockInfo?, radarDa
     GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Sky) {
         SectionHeader(
             "Cek strategi Radar Besok",
-            subtitle = if (radarDate.isNotBlank()) "Closing ${Market.prettyDate(radarDate, false)}" else "Data radar belum tersedia",
+            subtitle = if (radarDate.isNotBlank()) "Sinyal beli untuk ${Market.prettyDate(com.lumisignal.idx.engine.RadarPorto.nextSession(radarDate), false)}" else "Data radar belum tersedia",
         )
         Spacer(Modifier.height(10.dp))
         if (info == null) {

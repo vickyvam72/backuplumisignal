@@ -138,7 +138,7 @@ fun SetupScreen(onBack: () -> Unit, onDone: () -> Unit, autoStart: Boolean = tru
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                day?.let { "Data terbaru: closing ${Market.prettyDate(it.date, false)} · beli ${Market.prettyDate(RadarPorto.nextSession(it.date), false)}" }
+                day?.let { "Data terbaru: sinyal beli untuk ${Market.prettyDate(RadarPorto.nextSession(it.date))}" }
                     ?: "Dihitung dari harga closing semua saham IDX",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, textAlign = TextAlign.Center,
             )

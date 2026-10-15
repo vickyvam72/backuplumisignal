@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -222,7 +223,7 @@ fun TradeTimeline(signal: String, buy: String?, sell: String?, hold: Int?, pendi
             .border(1.dp, Lumi.Border.copy(alpha = 0.7f), RoundedCornerShape(14.dp)).padding(horizontal = 12.dp, vertical = 9.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TimelineCell("SINYAL", Market.shortDate(signal), Lumi.Sky, Modifier.weight(1f))
+            TimelineCell("SINYAL UTK", Market.shortDate(com.lumisignal.idx.engine.RadarPorto.nextSession(signal)), Lumi.Sky, Modifier.weight(1f))
             Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
             TimelineCell("BELI", buy?.let { Market.shortDate(it) } ?: (if (pending == "batal") "tidak terbeli" else pending ?: "–"), Lumi.Blue, Modifier.weight(1f))
             Text("›", color = Lumi.TextMuted, style = MaterialTheme.typography.titleMedium)
@@ -241,4 +242,111 @@ private fun TimelineCell(label: String, value: String, color: Color, modifier: M
         Text(label, style = MaterialTheme.typography.labelSmall, color = color)
         Text(value, style = MaterialTheme.typography.labelMedium, color = Lumi.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** "Bagikan laporan" button: share glyph + label. */
+@Composable
+fun ShareReportButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(14.dp)).background(Lumi.Sky.copy(alpha = 0.10f))
+            .border(1.dp, Lumi.Sky.copy(alpha = 0.4f), RoundedCornerShape(14.dp)).clickable(onClick = onClick)
+            .padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ShareIcon(onClick, 28.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = Lumi.Sky)
+    }
+}
+
+/** Dropdown field: label above, current value, list of options. */
+@Composable
+private fun PickField(label: String, options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Column(modifier) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+        Spacer(Modifier.height(4.dp))
+        Box {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Lumi.Bg.copy(alpha = 0.6f))
+                    .border(1.dp, Lumi.Sky.copy(alpha = 0.45f), RoundedCornerShape(12.dp)).clickable { open = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(options.getOrNull(selected) ?: "–", style = MaterialTheme.typography.bodyMedium, color = Lumi.Text, modifier = Modifier.weight(1f), maxLines = 1)
+                Text("▾", color = Lumi.Sky)
+            }
+            androidx.compose.material3.DropdownMenu(open, { open = false }, Modifier.background(Lumi.Surface).heightIn(max = 360.dp)) {
+                options.forEachIndexed { i, o ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(o, color = if (i == selected) Lumi.Sky else Lumi.Text) },
+                        onClick = { onSelect(i); open = false },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Picks a range of signal dates (shown as the session to buy) and shares the history in it.
+ * [dates] are closing dates, oldest first; [count] gives the number of trades in a range.
+ */
+@Composable
+fun RangeShareDialog(title: String, dates: List<String>, count: (String, String) -> Int, onDismiss: () -> Unit, onShare: (String, String) -> Unit) {
+    var from by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var to by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(dates.lastIndex.coerceAtLeast(0)) }
+    val labels = dates.map { Market.prettyDate(com.lumisignal.idx.engine.RadarPorto.nextSession(it), false) }
+    val n = if (dates.isEmpty()) 0 else count(dates[minOf(from, to)], dates[maxOf(from, to)])
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Lumi.Surface,
+        title = { Text(title, style = MaterialTheme.typography.titleLarge, color = Lumi.Text) },
+        text = {
+            Column {
+                Text("Pilih tanggal sinyal (tanggal beli yang dituju). Laporan dibagikan sebagai gambar.", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Spacer(Modifier.height(12.dp))
+                PickField("DARI TANGGAL", labels, from, { from = it }, Modifier.fillMaxWidth())
+                Spacer(Modifier.height(10.dp))
+                PickField("SAMPAI TANGGAL", labels, to, { to = it }, Modifier.fillMaxWidth())
+                Spacer(Modifier.height(12.dp))
+                Text("$n transaksi akan dibagikan", style = MaterialTheme.typography.labelLarge, color = if (n > 0) Lumi.Green else Lumi.TextMuted)
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                if (dates.isNotEmpty()) onShare(dates[minOf(from, to)], dates[maxOf(from, to)])
+            }, enabled = n > 0) { Text("Bagikan", color = if (n > 0) Lumi.Sky else Lumi.TextMuted) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Batal", color = Lumi.TextDim) } },
+    )
+}
+
+/** Picks one month of the backtest to share. [months] = (key, label), newest first. */
+@Composable
+fun MonthShareDialog(months: List<Pair<String, String>>, initial: String, busy: Boolean, onDismiss: () -> Unit, onShare: (String) -> Unit) {
+    var sel by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(months.indexOfFirst { it.first == initial }.coerceAtLeast(0)) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Lumi.Surface,
+        title = { Text("Bagikan backtest", style = MaterialTheme.typography.titleLarge, color = Lumi.Text) },
+        text = {
+            Column {
+                Text("Pilih bulan yang mau dibagikan. Laporan berisi jumlah transaksi, TP, SL, akumulasi P/L dan daftar sahamnya, sebagai gambar.",
+                    style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
+                Spacer(Modifier.height(12.dp))
+                PickField("BULAN", months.map { it.second }, sel, { sel = it }, Modifier.fillMaxWidth())
+                if (busy) {
+                    Spacer(Modifier.height(10.dp))
+                    Text("Menyiapkan gambar…", style = MaterialTheme.typography.labelLarge, color = Lumi.Sky)
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { months.getOrNull(sel)?.let { onShare(it.first) } }, enabled = !busy && months.isNotEmpty()) {
+                Text("Bagikan", color = Lumi.Sky)
+            }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Batal", color = Lumi.TextDim) } },
+    )
 }

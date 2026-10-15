@@ -171,20 +171,23 @@ object ShareCards {
         return bmp
     }
 
-    private fun send(ctx: Context, bmp: Bitmap, name: String, text: String, title: String) {
+    /** Sends one or more pictures (no text) through the share sheet. */
+    fun sendImages(ctx: Context, bitmaps: List<Bitmap>, name: String, title: String) {
+        if (bitmaps.isEmpty()) return
         val dir = File(ctx.cacheDir, "share").apply { mkdirs() }
         dir.listFiles()?.forEach { if (System.currentTimeMillis() - it.lastModified() > 3_600_000) it.delete() }
-        val file = File(dir, "$name.png")
-        FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bmp.recycle()
-        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".share", file)
-        val send = Intent(Intent.ACTION_SEND).apply {
-            type = "image/png"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, text)
-            clipData = ClipData.newRawUri(title, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val uris = ArrayList<android.net.Uri>()
+        bitmaps.forEachIndexed { i, bmp ->
+            val file = File(dir, if (bitmaps.size == 1) "$name.png" else "$name-${i + 1}.png")
+            FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bmp.recycle()
+            uris += FileProvider.getUriForFile(ctx, ctx.packageName + ".share", file)
         }
+        val send = if (uris.size == 1) Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
+        else Intent(Intent.ACTION_SEND_MULTIPLE).apply { putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris) }
+        send.type = "image/png"
+        send.clipData = ClipData.newRawUri(title, uris[0]).apply { uris.drop(1).forEach { addItem(ClipData.Item(it)) } }
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         ctx.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
@@ -193,18 +196,8 @@ object ShareCards {
 
     // ------------------------------------------------------------------ buy signal
 
-    fun sharePick(ctx: Context, d: RadarDay, jenis: String, p: RadarPick, sid: Int) {
-        val bmp = pickBitmap(ctx, d, jenis, p, sid)
-        val buy = RadarPorto.nextSession(d.date)
-        val text = buildString {
-            append("📡 Sinyal beli ${d.jenisLabel(jenis)} — ${p.ticker}\n")
-            append("Untuk ${Market.prettyDate(buy)} (closing ${Market.prettyDate(d.date, false)})\n")
-            append("Entry ≤ ${Fmt.price(p.entryHigh)} · TP ${Fmt.price(p.tp)} · SL ${Fmt.price(p.sl)}\n")
-            if (p.why.isNotEmpty()) append("Kenapa: ${p.why.joinToString("; ")}\n")
-            append("— Lumi Signal IDX")
-        }
-        send(ctx, bmp, "sinyal-${p.ticker}-${d.date}", text, "Bagikan sinyal ${p.ticker}")
-    }
+    fun sharePick(ctx: Context, d: RadarDay, jenis: String, p: RadarPick, sid: Int) =
+        sendImages(ctx, listOf(pickBitmap(ctx, d, jenis, p, sid)), "sinyal-${p.ticker}-${RadarPorto.nextSession(d.date)}", "Bagikan sinyal ${p.ticker}")
 
     fun pickBitmap(ctx: Context, d: RadarDay, jenis: String, p: RadarPick, sid: Int): Bitmap {
         val color = jenisColor(jenis)
@@ -218,7 +211,6 @@ object ShareCards {
             // Date first and big: the card is always tied to a session.
             y = pen.text("SINYAL BELI UNTUK", PAD, y, pen.paint(28f, GREEN, bold = true))
             y = pen.text(Market.prettyDate(buy), PAD, y + 6f, pen.paint(58f, TEXT, bold = true))
-            y = pen.text("Tanggal sinyal: closing ${Market.prettyDate(d.date)}", PAD, y + 8f, pen.paint(28f, DIM))
             y += 50f
             y = pen.text(p.ticker, PAD - 6f, y, pen.paint(170f, TEXT, bold = true, num = true))
             if (p.name.isNotBlank()) y = pen.block(p.name, PAD, y + 4f, (W - 2 * PAD).toInt(), pen.paint(32f, DIM))
@@ -267,7 +259,6 @@ object ShareCards {
             y += 60f
             y = pen.text("SINYAL BELI UNTUK", PAD, y, pen.paint(28f, GREEN, bold = true))
             y = pen.text(Market.prettyDate(buy), PAD, y + 6f, pen.paint(62f, TEXT, bold = true))
-            y = pen.text("Tanggal sinyal: closing ${Market.prettyDate(d.date)}", PAD, y + 8f, pen.paint(28f, DIM))
             y += 40f
             for ((j, picks) in lists) {
                 val color = jenisColor(j)
@@ -309,21 +300,8 @@ object ShareCards {
         }
     }
 
-    fun shareDay(ctx: Context, d: RadarDay, tier: String) {
-        val buy = RadarPorto.nextSession(d.date)
-        val lists = dayLists(d, tier)
-        val bmp = dayBitmap(ctx, d, tier)
-        val text = buildString {
-            append("📡 Sinyal beli untuk ${Market.prettyDate(buy)} (closing ${Market.prettyDate(d.date, false)})\n")
-            for ((j, picks) in lists) {
-                append("\n${d.jenisLabel(j).uppercase()}\n")
-                if (picks.isEmpty()) append("– tidak ada sinyal\n")
-                for (p in picks) append("• ${p.ticker}: entry ≤ ${Fmt.price(p.entryHigh)}, TP ${Fmt.price(p.tp)}, SL ${Fmt.price(p.sl)}\n")
-            }
-            append("\n— Lumi Signal IDX")
-        }
-        send(ctx, bmp, "sinyal-${d.date}", text, "Bagikan sinyal beli")
-    }
+    fun shareDay(ctx: Context, d: RadarDay, tier: String) =
+        sendImages(ctx, listOf(dayBitmap(ctx, d, tier)), "sinyal-${RadarPorto.nextSession(d.date)}", "Bagikan sinyal beli")
 
     // ------------------------------------------------------------------ history entry
 
@@ -397,25 +375,207 @@ object ShareCards {
                 PAD + half + 30f, y + 76f, pen.paint(34f, TEXT, bold = true))
             pen.c.drawLine(PAD + half, y + 34f, PAD + half, y + boxH - 34f, Paint().apply { color = BORDER; strokeWidth = 2f })
             val hold = sig.holdDays?.takeIf { sig.entryDate != null }
-            pen.text("Sinyal ${Market.shortDate(sig.refDate)}${hold?.let { " · hold $it hari" } ?: ""}", PAD + 40f, y + 136f, pen.paint(26f, MUTED))
+            pen.text("Sinyal beli untuk ${Market.shortDate(RadarPorto.nextSession(sig.refDate))}${hold?.let { " · hold $it hari" } ?: ""}", PAD + 40f, y + 136f, pen.paint(26f, MUTED))
             y += boxH + 50f
             footer(pen, y, "Hasil dicatat otomatis oleh Lumi Signal IDX dari harga Stockbit. Bukan rekomendasi investasi.")
         }
     }
 
-    fun shareSignal(ctx: Context, sig: Signal) {
+    fun shareSignal(ctx: Context, sig: Signal) =
+        sendImages(ctx, listOf(signalBitmap(ctx, sig)), "riwayat-${sig.symbol}-${sig.refDate}", "Bagikan ${sig.symbol}")
+
+    // ------------------------------------------------------------------ list report (history / backtest)
+
+    /** One trade line of a list report. [signal] is the closing date; it is shown as the session to buy. */
+    data class ReportRow(
+        val ticker: String,
+        val signal: String,
+        val buy: String?,
+        val sell: String?,
+        val hold: Int?,
+        val tp: Double?,
+        val sl: Double?,
+        val pnl: Double?,
+        /** TP, SL, Waktu, Hold, Menunggu, Batal */
+        val status: String,
+    )
+
+    data class Report(
+        val kind: String,
+        val jenis: String?,
+        val period: String,
+        val rows: List<ReportRow>,
+        val tag: String? = "Top 5 Saham IDX",
+    )
+
+    fun rowOf(sig: Signal): ReportRow {
         val (tp, sl) = levels(sig)
-        val entry = entryOf(sig)
-        val pnl = pnlOf(sig)
-        val (stLabel, _) = statusInfo(sig)
-        val bmp = signalBitmap(ctx, sig)
-        val text = buildString {
-            append("${if (sig.status == SignalStatus.TP) "✅" else if (sig.status == SignalStatus.SL) "🛑" else "📈"} ${sig.symbol} — ${stLabel.lowercase().replaceFirstChar { it.uppercase() }}\n")
-            append("Entry ${Fmt.price(entry)} · TP ${Fmt.price(tp)} · SL ${Fmt.price(sl)}\n")
-            pnl?.let { append("P/L ${Fmt.pct(it, decimals = 2)}\n") }
-            append("Beli ${sig.entryDate?.let { Market.prettyDate(it, false) } ?: "–"} · jual ${sig.exitDate?.takeIf { sig.entryDate != null }?.let { Market.prettyDate(it, false) } ?: if (sig.isOpen) "masih dipegang" else "–"}\n")
-            append("— Lumi Signal IDX")
+        val bought = sig.entryDate != null && sig.status != SignalStatus.CANCELLED
+        return ReportRow(
+            ticker = sig.symbol,
+            signal = sig.refDate,
+            buy = sig.entryDate.takeIf { bought },
+            sell = sig.exitDate.takeIf { bought && !sig.isOpen },
+            hold = sig.holdDays.takeIf { bought },
+            tp = tp,
+            sl = sl,
+            pnl = pnlOf(sig),
+            status = when (sig.status) {
+                SignalStatus.TP -> "TP"
+                SignalStatus.SL -> "SL"
+                SignalStatus.EXPIRED -> "Waktu"
+                SignalStatus.ACTIVE -> "Hold"
+                SignalStatus.WAITING -> "Menunggu"
+                SignalStatus.CANCELLED -> "Batal"
+            },
+        )
+    }
+
+    fun rowOf(t: com.lumisignal.idx.data.BtTrade) = ReportRow(
+        ticker = t.ticker, signal = t.signal, buy = t.buy, sell = t.sell, hold = t.hold,
+        tp = t.tp, sl = t.sl, pnl = t.pnl, status = t.exit,
+    )
+
+    private fun statusColor(s: String) = when (s) {
+        "TP" -> GREEN
+        "SL" -> RED
+        "Waktu" -> AMBER
+        "Hold" -> BLUE
+        "Menunggu" -> SKY
+        else -> MUTED
+    }
+
+    private const val FIRST_ROWS = 18
+    private const val PAGE_ROWS = 26
+    private const val ROW_H = 66f
+
+    /** Column x positions (left edges) and widths of the trade table. */
+    private val COLS = listOf(
+        "KODE" to 150f, "SINYAL*" to 118f, "BELI" to 112f, "JUAL" to 112f, "HOLD" to 82f,
+        "TP" to 112f, "SL" to 112f, "P/L" to 138f,
+    )
+
+    /** The report as one or more pages (pictures) of the same size. */
+    fun reportPages(ctx: Context, r: Report): List<Bitmap> {
+        val rows = r.rows
+        val chunks = buildList {
+            add(rows.take(FIRST_ROWS))
+            var i = FIRST_ROWS
+            while (i < rows.size) { add(rows.subList(i, minOf(rows.size, i + PAGE_ROWS))); i += PAGE_ROWS }
         }
-        send(ctx, bmp, "riwayat-${sig.symbol}-${sig.refDate}", text, "Bagikan ${sig.symbol}")
+        val accent = r.jenis?.let { jenisColor(it) } ?: BLUE
+        return chunks.mapIndexed { n, chunk -> reportPage(ctx, r, chunk, n, chunks.size, accent) }
+    }
+
+    private fun reportPage(ctx: Context, r: Report, chunk: List<ReportRow>, page: Int, pages: Int, accent: Int): Bitmap =
+        render(ctx, accent) { pen ->
+            var y = header(pen, PAD, r.kind)
+            y += 44f
+            if (page == 0) {
+                var x = PAD
+                r.jenis?.let { x = pen.pill(if (it == "winrate") "WINRATE TINGGI" else "PROFIT TINGGI", PAD, y, accent, filled = true, size = 30f) + 14f }
+                r.tag?.let { pen.pill(it, x, y, SKY, false, 28f) }
+                y += 96f
+                y = pen.text("PERIODE", PAD, y, pen.paint(26f, GREEN, bold = true))
+                y = pen.block(r.period, PAD, y + 4f, (W - 2 * PAD).toInt(), pen.paint(46f, TEXT, bold = true))
+                y += 34f
+                // Summary tiles.
+                val closed = r.rows.filter { it.status == "TP" || it.status == "SL" || it.status == "Waktu" }
+                val acc = closed.mapNotNull { it.pnl }.takeIf { it.isNotEmpty() }?.sum()
+                val gap = 18f
+                val tw = (W - 2 * PAD - 3 * gap) / 4
+                val th = 150f
+                val tiles = listOf(
+                    Triple("TRANSAKSI", "${r.rows.size}", SKY),
+                    Triple("KENA TP", "${r.rows.count { it.status == "TP" }}", GREEN),
+                    Triple("KENA SL", "${r.rows.count { it.status == "SL" }}", RED),
+                    Triple("AKUMULASI P/L", acc?.let { Fmt.pct(it, decimals = 2) } ?: "–", if ((acc ?: 0.0) >= 0) GREEN else RED),
+                )
+                tiles.forEachIndexed { i, (label, value, color) ->
+                    val left = PAD + i * (tw + gap)
+                    val rect = RectF(left, y, left + tw, y + th)
+                    pen.round(rect, 26f, alpha(color, 0.12f), alpha(color, 0.5f))
+                    pen.text(label, left + 22f, y + 24f, pen.paint(22f, color, bold = true))
+                    val vp = pen.paint(if (value.length > 7) 40f else 54f, TEXT, bold = true, num = true)
+                    pen.text(value, left + 22f, y + 64f, vp)
+                }
+                y += th + 16f
+                val extra = listOfNotNull(
+                    r.rows.count { it.status == "Waktu" }.takeIf { it > 0 }?.let { "$it keluar karena waktu habis" },
+                    r.rows.count { it.status == "Hold" }.takeIf { it > 0 }?.let { "$it masih dipegang" },
+                    r.rows.count { it.status == "Menunggu" }.takeIf { it > 0 }?.let { "$it menunggu entry" },
+                    r.rows.count { it.status == "Batal" }.takeIf { it > 0 }?.let { "$it batal (tidak terbeli)" },
+                )
+                if (extra.isNotEmpty()) y = pen.block(extra.joinToString(" · "), PAD, y, (W - 2 * PAD).toInt(), pen.paint(25f, DIM))
+                y += 30f
+            } else {
+                y = pen.text(r.period, PAD, y, pen.paint(32f, TEXT, bold = true))
+                y += 26f
+            }
+            // Table header.
+            pen.round(RectF(PAD - 12f, y, W - PAD + 12f, y + 56f), 18f, alpha(accent, 0.22f))
+            var cx = PAD
+            for ((label, w) in COLS) {
+                val right = label == "P/L"
+                pen.text(label, if (right) cx + w - 8f else cx, y + 14f, pen.paint(22f, TEXT, bold = true, align = if (right) Paint.Align.RIGHT else Paint.Align.LEFT))
+                cx += w
+            }
+            y += 66f
+            if (chunk.isEmpty()) {
+                y = pen.block("Belum ada transaksi di periode ini.", PAD, y + 10f, (W - 2 * PAD).toInt(), pen.paint(28f, MUTED)) + 20f
+            }
+            chunk.forEachIndexed { i, row ->
+                if (i % 2 == 0) pen.round(RectF(PAD - 12f, y, W - PAD + 12f, y + ROW_H - 6f), 14f, alpha(SURFACE, 0.75f))
+                val sc = statusColor(row.status)
+                pen.c.drawRoundRect(RectF(PAD - 12f, y + 8f, PAD - 4f, y + ROW_H - 14f), 4f, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = sc })
+                val ty = y + 14f
+                val cells = listOf(
+                    row.ticker,
+                    Market.shortDate(RadarPorto.nextSession(row.signal)),
+                    row.buy?.let { Market.shortDate(it) } ?: if (row.status == "Batal") "batal" else "–",
+                    row.sell?.let { Market.shortDate(it) } ?: if (row.status == "Hold") "hold" else "–",
+                    row.hold?.let { "${it}h" } ?: "–",
+                    Fmt.price(row.tp),
+                    Fmt.price(row.sl),
+                    row.pnl?.let { Fmt.pct(it, decimals = 2) } ?: "–",
+                )
+                cx = PAD
+                cells.forEachIndexed { k, v ->
+                    val (_, w) = COLS[k]
+                    val paint = when (k) {
+                        0 -> pen.paint(30f, TEXT, bold = true, num = true)
+                        7 -> pen.paint(28f, row.pnl?.let { if (it >= 0) GREEN else RED } ?: MUTED, bold = true, num = true, align = Paint.Align.RIGHT)
+                        5 -> pen.paint(26f, GREEN, num = true)
+                        6 -> pen.paint(26f, RED, num = true)
+                        else -> pen.paint(25f, DIM, num = k == 4)
+                    }
+                    pen.text(v, if (k == 7) cx + w - 8f else cx, ty + if (k == 0 || k == 7) 0f else 3f, paint)
+                    cx += w
+                }
+                y += ROW_H
+            }
+            y += 16f
+            // Legend.
+            var lx = PAD
+            for ((lab, col) in listOf("TP" to GREEN, "SL" to RED, "Waktu habis" to AMBER, "Hold" to BLUE, "Menunggu" to SKY, "Batal" to MUTED)) {
+                pen.c.drawRoundRect(RectF(lx, y + 8f, lx + 8f, y + 34f), 4f, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = col })
+                lx = pen.text(lab, lx + 16f, y + 4f, pen.paint(22f, DIM)).let { lx + 16f + pen.paint(22f, DIM).measureText(lab) + 26f }
+            }
+            y += 50f
+            y = pen.block("*Sinyal = tanggal sesi beli yang dituju sinyal (dihitung dari closing hari bursa sebelumnya). P/L dari harga beli ke harga jual, tanpa fee; akumulasi hanya transaksi yang sudah selesai.",
+                PAD, y, (W - 2 * PAD).toInt(), pen.paint(22f, MUTED))
+            y += 20f
+            if (pages > 1) y = pen.text("Halaman ${page + 1} dari $pages", PAD, y, pen.paint(26f, SKY, bold = true)) + 10f
+            footer(pen, y + 10f, "Lumi Signal IDX · bukan rekomendasi investasi.")
+        }
+
+    fun shareReport(ctx: Context, r: Report, name: String) =
+        sendImages(ctx, reportPages(ctx, r), name, "Bagikan ${r.kind}")
+
+    /** "15 Okt – 20 Okt 2026" with buy dates. */
+    fun periodLabel(fromSignal: String, toSignal: String): String {
+        val a = RadarPorto.nextSession(fromSignal)
+        val b = RadarPorto.nextSession(toSignal)
+        return if (a == b) Market.prettyDate(a) else "${Market.prettyDate(a, false)} – ${Market.prettyDate(b, false)}"
     }
 }

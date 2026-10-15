@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -68,6 +69,10 @@ fun BacktestScreen() {
     var trades by remember { mutableStateOf<List<BtTrade>?>(null) }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
+    var shareDialog by remember { mutableStateOf(false) }
+    var shareBusy by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         if (RadarRepo.day.value == null) runCatching { RadarRepo.refresh() }
@@ -96,7 +101,10 @@ fun BacktestScreen() {
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp)) {
-            Text("Backtest", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Backtest", style = MaterialTheme.typography.headlineSmall, color = Lumi.Text, modifier = Modifier.weight(1f))
+                if (index != null) ShareReportButton("Bagikan", { shareDialog = true })
+            }
             Text(
                 "Data historis + transaksi baru yang sudah kena TP/SL (diperbarui tiap hari)${index?.period?.let { " · $it" } ?: ""}",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
@@ -109,7 +117,7 @@ fun BacktestScreen() {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
-                Text("PILIH BULAN (tanggal sinyal)", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
+                Text("PILIH BULAN", style = MaterialTheme.typography.labelSmall, color = Lumi.TextMuted)
                 Spacer(Modifier.height(6.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     index?.months.orEmpty().forEach { m ->
@@ -148,6 +156,28 @@ fun BacktestScreen() {
                         items(rows, key = { "${it.signal}-${it.combined}-${it.sid}-${it.ticker}" }) { t -> BtTradeCard(d, t) }
                     }
                 }
+            }
+        }
+    }
+    if (shareDialog) {
+        val now = com.lumisignal.idx.engine.Market.today().take(7)
+        val months = index?.months.orEmpty().filter { it.month >= "2025-10" && it.month <= now }.map { it.month to it.label }
+        MonthShareDialog(months, month, shareBusy, onDismiss = { if (!shareBusy) shareDialog = false }) { m ->
+            shareBusy = true
+            scope.launch {
+                val list = RadarRepo.backtestMonth(m).orEmpty()
+                    .filter { it.tier == tier && it.jenis == jenis && it.combined }
+                    .sortedWith(compareBy<BtTrade> { it.signal }.thenBy { it.ticker })
+                val label = months.firstOrNull { it.first == m }?.second ?: m
+                val pages = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    com.lumisignal.idx.share.ShareCards.reportPages(
+                        ctx,
+                        com.lumisignal.idx.share.ShareCards.Report("Backtest", jenis, label, list.map { com.lumisignal.idx.share.ShareCards.rowOf(it) }),
+                    )
+                }
+                shareBusy = false
+                shareDialog = false
+                com.lumisignal.idx.share.ShareCards.sendImages(ctx, pages, "backtest-$jenis-$m", "Bagikan backtest")
             }
         }
     }

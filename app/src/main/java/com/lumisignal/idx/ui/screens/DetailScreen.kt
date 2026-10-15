@@ -212,11 +212,6 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(Fmt.price(sig.close), style = NumberStyle.copy(fontSize = 30.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        Fmt.pct(sig.changePct), style = NumberStyle.copy(fontSize = 16.sp),
-                        color = if (sig.changePct >= 0) Lumi.Green else Lumi.Red, modifier = Modifier.padding(bottom = 4.dp),
-                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -319,11 +314,6 @@ fun AnalysisDetail(
                 Spacer(Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(Fmt.price(close), style = NumberStyle.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        Fmt.pct(changePct), style = NumberStyle.copy(fontSize = 17.sp),
-                        color = if (changePct >= 0) Lumi.Green else Lumi.Red, modifier = Modifier.padding(bottom = 5.dp),
-                    )
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -175,7 +175,6 @@ private fun BuyDateHero(d: RadarDay) {
                 Market.prettyDate(RadarPorto.nextSession(d.date)),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White,
             )
-            Text("Order berlaku 1 sesi di tanggal ini", style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim)
         }
         val ctx = androidx.compose.ui.platform.LocalContext.current
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

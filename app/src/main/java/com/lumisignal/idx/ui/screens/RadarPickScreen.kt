@@ -139,6 +139,13 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
                 }
             }
             Spacer(Modifier.height(12.dp))
+            // Portfolio action at the top.
+            if (porto == null) {
+                GradientButton("Masukkan Porto", { dialog = true }, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
+            } else {
+                GhostButton("Sudah di Porto · lihat posisi", { onOpenSignal(porto.id) }, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
+            }
+            Spacer(Modifier.height(12.dp))
 
             // Watchlist until bought: entry, TP and SL are shown once the strategy entry has filled.
             if (filledPlan != null && strat?.entryPrice != null) {
@@ -197,12 +204,6 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
             }
             Spacer(Modifier.height(12.dp))
 
-            if (porto == null) {
-                GradientButton("Masukkan Porto", { dialog = true }, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
-            } else {
-                GhostButton("Sudah di Porto · lihat posisi", { onOpenSignal(porto.id) }, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
-            }
-            Spacer(Modifier.height(10.dp))
             Text(
                 "Bukan rekomendasi investasi. Sinyal dihitung dari data closing; selalu pakai stop loss dan atur ukuran posisi.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,

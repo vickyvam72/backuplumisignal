@@ -559,11 +559,7 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(p.ticker, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
-                    if (inPorto) {
-                        Spacer(Modifier.width(6.dp))
-                        Pill("Porto", Lumi.Green)
-                    }
+                    Text(p.ticker, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text, maxLines = 1, softWrap = false)
                 }
                 val sub = if (combined) d.strategy(sid)?.name ?: p.name else p.name
                 if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)

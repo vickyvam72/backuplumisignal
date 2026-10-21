@@ -122,16 +122,30 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
     val shareCtx = androidx.compose.ui.platform.LocalContext.current
     val plan = sig.eval.plan
     GlassCard(Modifier.fillMaxWidth(), padding = 14.dp, onClick = onOpen) {
+        // Header: badge, ticker + strategy, status. Buttons get their own row so nothing is squeezed.
         Row(verticalAlignment = Alignment.CenterVertically) {
             val tag = sig.radar
             if (tag != null) RadarBadge(tag.icon, tag.color, tag.jenis, 36.dp) else StrategyBadge(sig.strategyId, 36.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sig.symbol, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
-                    Spacer(Modifier.width(8.dp))
+                Text(sig.symbol, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text, maxLines = 1, softWrap = false)
+                Text(
+                    sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                StatusBadge(sig.status)
+                val pnl = sig.pnlPct
+                if (pnl != null && sig.status != SignalStatus.CANCELLED) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(Fmt.pct(pnl), style = NumberStyle.copy(fontSize = 14.sp), color = if (pnl >= 0) Lumi.Green else Lumi.Red)
                 }
             }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
             // Strategy history: add to the portfolio from the top of the card.
             if (sig.source == com.lumisignal.idx.data.SOURCE_STRATEGY) {
                 val items by com.lumisignal.idx.Graph.history.items.collectAsStateWithLifecycle()
@@ -145,31 +159,20 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 }
                 val c = if (inPorto) Lumi.Green else Lumi.Blue
                 Box(
-                    Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
-                        .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                        .clickable { if (!inPorto) dialog = true else onOpen() }.padding(horizontal = 12.dp),
+                    Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(12.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
+                        .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .clickable { if (!inPorto) dialog = true else onOpen() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (inPorto) "✓ Di Porto" else "+ Porto", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = if (inPorto) Lumi.Green else Lumi.Text)
+                    Text(
+                        if (inPorto) "✓ Sudah di Porto" else "+ Tambahkan ke Porto",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = if (inPorto) Lumi.Green else Lumi.Text, maxLines = 1,
+                    )
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
             }
-            ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 32.dp)
-            Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                StatusBadge(sig.status)
-                val pnl = sig.pnlPct
-                if (pnl != null && sig.status != SignalStatus.CANCELLED) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(Fmt.pct(pnl), style = NumberStyle.copy(fontSize = 14.sp), color = if (pnl >= 0) Lumi.Green else Lumi.Red)
-                }
-            }
+            ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 36.dp)
         }
-        // Strategy name on its own line, so the buttons above never squeeze it.
-        Text(
-            sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 48.dp, top = 2.dp),
-        )
         Spacer(Modifier.height(8.dp))
         TradeTimeline(
             signal = sig.refDate, buy = sig.entryDate, sell = sig.exitDate, hold = sig.holdDays,

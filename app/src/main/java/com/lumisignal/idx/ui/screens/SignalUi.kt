@@ -135,6 +135,11 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(8.dp))
+            // Portfolio and other entries: share sits in the header (no empty button row).
+            if (sig.source != com.lumisignal.idx.data.SOURCE_STRATEGY) {
+                ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 34.dp)
+                Spacer(Modifier.width(8.dp))
+            }
             Column(horizontalAlignment = Alignment.End) {
                 StatusBadge(sig.status)
                 val pnl = sig.pnlPct
@@ -144,10 +149,11 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 }
             }
         }
+        if (sig.source == com.lumisignal.idx.data.SOURCE_STRATEGY) {
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
             // Strategy history: add to the portfolio from the top of the card.
-            if (sig.source == com.lumisignal.idx.data.SOURCE_STRATEGY) {
+            run {
                 val items by com.lumisignal.idx.Graph.history.items.collectAsStateWithLifecycle()
                 val inPorto = androidx.compose.runtime.remember(items, sig.id) {
                     items.any { it.source == com.lumisignal.idx.data.SOURCE_PORTO && it.linkedId == sig.id }
@@ -172,6 +178,7 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 Spacer(Modifier.width(10.dp))
             }
             ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 36.dp)
+        }
         }
         Spacer(Modifier.height(8.dp))
         TradeTimeline(

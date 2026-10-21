@@ -271,6 +271,8 @@ data class RadarTag(
     val exitText: String = "",
     val regText: String = "",
     val desc: String = "",
+    /** Position in the Top 5 (1–5), same order as on Home; 0 when unknown (older entries). */
+    val rank: Int = 0,
 )
 
 

@@ -86,7 +86,7 @@ fun HistoryScreen(onOpenSignal: (String) -> Unit) {
             modifier = Modifier.padding(horizontal = 18.dp),
         )
         Spacer(Modifier.height(12.dp))
-        if (tab == 0) StrategyHistory(onOpenSignal) else PortoHistory(items.filter { it.source == SOURCE_PORTO }, onOpenSignal)
+        if (tab == 0) StrategyHistory(onOpenSignal) else PortoHistory(items.filter { it.source == SOURCE_PORTO }.sortedWith(com.lumisignal.idx.engine.RadarPorto.historyOrder), onOpenSignal)
     }
 }
 
@@ -108,7 +108,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
     val radarItems = items.filter { it.source == SOURCE_STRATEGY && it.radar != null }
     val all = radarItems.filter { it.radar?.tier == tier && it.radar?.jenis == jenis }
     val rows = (if (sel == 0) all.filter { it.radar?.combined == true } else all.filter { it.radar?.combined == false && it.strategyId == sel })
-        .sortedWith(compareByDescending<com.lumisignal.idx.data.Signal> { it.refDate }.thenBy { it.symbol })
+        .sortedWith(com.lumisignal.idx.engine.RadarPorto.historyOrder)
     val d = day
     val strategyIds = (d?.specs?.get(tier)?.get(jenis)?.strategies?.map { it.id }.orEmpty() +
         all.filter { it.radar?.combined == false }.map { it.strategyId }).distinct()
@@ -179,7 +179,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
             onDismiss = { shareDialog = false },
         ) { a, b ->
             shareDialog = false
-            val list = rows.filter { it.refDate in a..b }.sortedWith(compareBy<com.lumisignal.idx.data.Signal> { it.refDate }.thenBy { it.symbol })
+            val list = rows.filter { it.refDate in a..b }.sortedWith(com.lumisignal.idx.engine.RadarPorto.reportOrder)
             com.lumisignal.idx.share.ShareCards.shareReport(
                 ctx,
                 com.lumisignal.idx.share.ShareCards.Report("Riwayat Strategi", jenis, com.lumisignal.idx.share.ShareCards.periodLabel(a, b),
@@ -246,7 +246,7 @@ private fun PortoHistory(portoItems: List<com.lumisignal.idx.data.Signal>, onOpe
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${portoItems.size} saham di porto", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted, modifier = Modifier.weight(1f))
                 ShareReportButton("Bagikan semua", {
-                    val list = portoItems.sortedWith(compareBy<com.lumisignal.idx.data.Signal> { it.refDate }.thenBy { it.symbol })
+                    val list = portoItems.sortedWith(com.lumisignal.idx.engine.RadarPorto.reportOrder)
                     val jenisSet = list.mapNotNull { it.radar?.jenis }.toSet()
                     com.lumisignal.idx.share.ShareCards.shareReport(
                         ctx,

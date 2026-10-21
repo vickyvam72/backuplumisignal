@@ -42,6 +42,24 @@ object RadarPorto {
         return Quote("Closing", pick.chg, pick.close)
     }
 
+    /** Top 5 position of a saved signal (as on Home); unknown ones go last. */
+    fun rankOf(sig: Signal): Int {
+        val tag = sig.radar ?: return 99
+        if (tag.rank > 0) return tag.rank
+        val d = RadarRepo.day.value ?: return 99
+        if (d.date != sig.refDate) return 99
+        val i = d.board(tag.tier, tag.jenis)?.top5?.indexOfFirst { it.ticker == sig.symbol && it.sid == tag.sid } ?: -1
+        return if (i >= 0) i + 1 else 99
+    }
+
+    /** Newest signal day first, then the same order as the Top 5 on Home. */
+    val historyOrder: Comparator<Signal> = compareByDescending<Signal> { it.refDate }
+        .thenBy { if (it.radar?.jenis == "winrate") 1 else 0 }.thenBy { rankOf(it) }.thenBy { it.symbol }
+
+    /** Oldest first (reports), then the Top 5 order. */
+    val reportOrder: Comparator<Signal> = compareBy<Signal> { it.refDate }
+        .thenBy { if (it.radar?.jenis == "winrate") 1 else 0 }.thenBy { rankOf(it) }.thenBy { it.symbol }
+
     fun plan(day: RadarDay, tier: String, jenis: String, sid: Int, pick: RadarPick): TradePlan {
         val spec = day.spec(tier, jenis, sid)
         val top = pick.entryHigh
@@ -106,6 +124,7 @@ object RadarPorto {
                 jenis = jenis, tier = tier, sid = sid, name = meta?.name ?: "Strategi $sid",
                 icon = meta?.icon ?: "", color = meta?.color ?: "#3D8BFF", combined = combined,
                 why = pick.why, exitText = spec?.exitText ?: "", regText = spec?.regText ?: "", desc = meta?.desc ?: "",
+                rank = if (combined) (day.board(tier, jenis)?.top5?.indexOfFirst { it.ticker == pick.ticker && it.sid == sid } ?: -1) + 1 else pick.rank,
             ),
         )
     }

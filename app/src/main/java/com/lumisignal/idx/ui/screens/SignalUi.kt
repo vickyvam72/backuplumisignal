@@ -131,10 +131,6 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                     Text(sig.symbol, style = NumberStyle.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Lumi.Text)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text(
-                    sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
             }
             // Strategy history: add to the portfolio from the top of the card.
             if (sig.source == com.lumisignal.idx.data.SOURCE_STRATEGY) {
@@ -169,7 +165,12 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(10.dp))
+        // Strategy name on its own line, so the buttons above never squeeze it.
+        Text(
+            sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 48.dp, top = 2.dp),
+        )
+        Spacer(Modifier.height(8.dp))
         TradeTimeline(
             signal = sig.refDate, buy = sig.entryDate, sell = sig.exitDate, hold = sig.holdDays,
             pending = when {

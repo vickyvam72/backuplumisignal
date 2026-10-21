@@ -596,7 +596,7 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "👁 Dipantau · entry, TP & SL muncul di Riwayat setelah terbeli",
+                    "👁 Dipantau · entry, TP & SL muncul setelah terbeli",
                     style = MaterialTheme.typography.labelSmall, color = Lumi.Sky, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }

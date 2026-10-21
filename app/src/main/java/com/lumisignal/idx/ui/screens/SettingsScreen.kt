@@ -107,7 +107,7 @@ fun SettingsScreen() {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Saham di Riwayat Strategi dan Porto diaudit dengan high & low harian asli dari Stockbit: tiap 1 menit selama jam bursa, juga di latar belakang (ada notifikasi "Audit harga berjalan"). Notifikasi muncul pukul 17.00 saat saham pantauan terbit, saat saham terbeli (lengkap dengan entry, TP & SL), dan saat kena TP atau SL.",
+                "Saham di Riwayat Strategi dan Porto diaudit dengan high & low harian asli dari Stockbit: tiap 1 menit selama jam bursa, juga di latar belakang (ada notifikasi \"Audit harga berjalan\"). Notifikasi muncul pukul 17.00 saat saham pantauan terbit, saat saham terbeli (lengkap dengan entry, TP & SL), dan saat kena TP atau SL.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
             if (!notif || !bg) {

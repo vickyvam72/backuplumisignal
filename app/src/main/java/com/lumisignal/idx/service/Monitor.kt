@@ -19,6 +19,7 @@ import com.lumisignal.idx.engine.RadarRepo
 import com.lumisignal.idx.engine.RadarPorto
 import com.lumisignal.idx.engine.Tracker
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Background price monitor for every open signal (strategy history and portfolio): live quotes
@@ -56,7 +57,12 @@ object Monitor {
      * so far), so a TP or SL touched between two checks is never missed. After the close it reads
      * the final bars once. Returns the number of signals whose status changed.
      */
-    suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int {
+    private val runLock = kotlinx.coroutines.sync.Mutex()
+
+    /** One pass at a time (app, worker, alarm and the audit service can overlap). */
+    suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int = runLock.withLock { runPass(ctx, forceDaily) }
+
+    private suspend fun runPass(ctx: Context, forceDaily: Boolean): Int {
         checkRadar(ctx)
         if (Graph.session.access == null) return 0
         dailyTokenRefresh()
@@ -132,9 +138,10 @@ object Monitor {
             tracked = tracked.copy(lastUpdate = System.currentTimeMillis())
             if (tracked.status != sig.status || tracked.exitPrice != sig.exitPrice) {
                 changed++
-                // Portfolio positions notify every change; screening results only when TP or SL is hit.
+                // Portfolio positions notify every change; screening results when bought (entry, TP & SL announced) and at TP or SL.
                 if (tracked.status != sig.status &&
-                    (sig.source == com.lumisignal.idx.data.SOURCE_PORTO || tracked.status == com.lumisignal.idx.data.SignalStatus.TP || tracked.status == com.lumisignal.idx.data.SignalStatus.SL)
+                    (sig.source == com.lumisignal.idx.data.SOURCE_PORTO || tracked.status == com.lumisignal.idx.data.SignalStatus.TP ||
+                        tracked.status == com.lumisignal.idx.data.SignalStatus.SL || tracked.status == com.lumisignal.idx.data.SignalStatus.ACTIVE)
                 ) Notifier.statusChanged(ctx, tracked)
             }
             updated += tracked
@@ -197,6 +204,7 @@ class MonitorWorker(appContext: Context, params: WorkerParameters) : CoroutineWo
         Graph.init(applicationContext)
         return try {
             Monitor.runOnce(applicationContext)
+            AuditService.start(applicationContext)
             Result.success()
         } catch (e: AuthExpiredException) {
             val today = Market.today()

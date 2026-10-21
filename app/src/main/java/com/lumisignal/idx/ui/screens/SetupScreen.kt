@@ -80,7 +80,7 @@ fun SetupScreen(onBack: () -> Unit, onDone: () -> Unit, autoStart: Boolean = tru
     if (previewAllOk) remember {
         checks.forEachIndexed { i, c ->
             c.state = CheckState.OK
-            c.detail = listOf("Akun Stockbit · hanya membaca data", "Harga dicek tiap 15 menit · notifikasi aktif", "950 saham IDX dipindai")[i]
+            c.detail = listOf("Akun Stockbit · hanya membaca data", "Harga dicek tiap 1 menit saat bursa buka · notifikasi aktif", "950 saham IDX dipindai")[i]
         }
     }
     val allOk = checks.all { it.state == CheckState.OK }
@@ -106,7 +106,7 @@ fun SetupScreen(onBack: () -> Unit, onDone: () -> Unit, autoStart: Boolean = tru
         step(checks[1]) {
             Monitor.schedule(ctx)
             val on = withContext(Dispatchers.IO) { Monitor.isScheduled(ctx) }
-            if (!on) null else "Harga dicek tiap 15 menit · notifikasi ${if (Perms.notifications(ctx)) "aktif" else "belum diizinkan"}"
+            if (!on) null else "Harga dicek tiap 1 menit saat bursa buka · notifikasi ${if (Perms.notifications(ctx)) "aktif" else "belum diizinkan"}"
         }
         if (checks[1].state != CheckState.OK) { checks[1].detail = "Audit belum berjalan. Coba lagi."; return@LaunchedEffect }
         step(checks[2]) {

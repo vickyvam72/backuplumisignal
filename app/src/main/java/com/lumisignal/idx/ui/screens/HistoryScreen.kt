@@ -147,7 +147,7 @@ private fun StrategyHistory(onOpenSignal: (String) -> Unit) {
             item {
                 EmptyState(
                     "Belum ada hasil",
-                    "Hasil screening tercatat di sini begitu kamu membuka daftar sahamnya. Setiap saham dipantau otomatis — saat aplikasi terbuka tiap menit, di latar belakang ±15 menit — sampai terbeli, kena TP, SL, atau habis masa hold.",
+                    "Hasil screening tercatat di sini begitu kamu membuka daftar sahamnya. Setiap saham diaudit otomatis tiap 1 menit selama jam bursa, juga saat aplikasi ditutup, sampai terbeli, kena TP, SL, atau habis masa hold.",
                 )
             }
         } else {

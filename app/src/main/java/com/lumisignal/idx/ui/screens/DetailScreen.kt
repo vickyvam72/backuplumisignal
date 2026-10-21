@@ -174,7 +174,7 @@ private fun TrackingCard(sig: Signal) {
         Spacer(Modifier.height(8.dp))
         val updated = if (sig.lastUpdate > 0) SimpleDateFormat("d MMM HH:mm", Locale("id", "ID")).format(Date(sig.lastUpdate)) else "belum"
         Text(
-            "Diperbarui: $updated · dipantau tiap ±15 menit saat bursa buka, dan dicek ulang dengan candle harian setelah tutup.",
+            "Diperbarui: $updated · diaudit tiap 1 menit saat bursa buka, dan dicek ulang dengan candle harian setelah tutup.",
             style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
         )
     }
@@ -185,7 +185,12 @@ private fun TrackingCard(sig: Signal) {
 private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> Unit, onDelete: () -> Unit, porto: Signal?, onPorto: () -> Unit) {
     val tag = sig.radar ?: return
     val accent = com.lumisignal.idx.ui.components.hexColor(tag.color)
-    val plan = sig.eval.plan
+    // Watchlist until bought: the plan (with TP/SL from the real entry) only appears once filled.
+    val entry = sig.entryPrice ?: sig.customEntry
+    val plan = sig.eval.plan?.takeIf { entry != null }?.let { p ->
+        val (t, l) = com.lumisignal.idx.share.ShareCards.levels(sig)
+        p.copy(tp = t ?: p.tp, stopLoss = l ?: p.stopLoss)
+    }
     val sr = remember(chartBars.size, sig.refDate) { com.lumisignal.idx.engine.Levels.of(chartBars.filter { it.date <= sig.refDate }) }
     Column(Modifier.fillMaxSize()) {
         val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -221,9 +226,21 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                 GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue) {
                     SectionHeader("Rencana trading", subtitle = if (sig.entryPrice != null) "TP/SL dihitung dari harga beli sebenarnya" else "TP/SL dihitung dari batas beli, menyesuaikan saat terbeli")
                     Spacer(Modifier.height(14.dp))
-                    PlanPanel(it, entryPrice = sig.entryPrice)
+                    PlanPanel(it, entryPrice = entry)
                 }
                 Spacer(Modifier.height(12.dp))
+            } ?: run {
+                if (sig.status == SignalStatus.WAITING) {
+                    GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Sky) {
+                        SectionHeader("👁 Saham pantauan", subtitle = "Entry, TP & SL belum diumumkan")
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Harga entry, TP dan SL muncul di sini begitu saham ini terbeli di sesi ${Market.prettyDate(com.lumisignal.idx.engine.RadarPorto.nextSession(sig.refDate), false)}, lengkap dengan notifikasi.",
+                            style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
             }
             if (chartBars.isNotEmpty()) {
                 GlassCard(Modifier.fillMaxWidth(), padding = 12.dp) {

@@ -568,18 +568,23 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
                 val sub = if (combined) d.strategy(sid)?.name ?: p.name else p.name
                 if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("BELI ≤", style = MaterialTheme.typography.labelSmall, color = Lumi.Blue)
-                Text(Fmt.price(p.entryHigh), style = NumberStyle.copy(fontSize = 16.sp), color = Lumi.Text)
-            }
             Spacer(Modifier.width(10.dp))
             val shareCtx = LocalContext.current
             ShareIcon({ com.lumisignal.idx.share.ShareCards.sharePick(shareCtx, d, jenis, p, sid) }, 34.dp)
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            LevelChip("TP", p.tp, p.tpPct, Lumi.Green, Modifier.weight(1f))
-            LevelChip("SL", p.sl, p.slPct?.let { -it }, Lumi.Red, Modifier.weight(1f))
+            // Watchlist: entry, TP and SL are announced in the history (with a notification) once bought.
+            Row(
+                Modifier.weight(2f).height(42.dp).clip(RoundedCornerShape(10.dp)).background(Lumi.Sky.copy(alpha = 0.08f))
+                    .border(1.dp, Lumi.Sky.copy(alpha = 0.3f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "👁 Dipantau · entry, TP & SL muncul di Riwayat setelah terbeli",
+                    style = MaterialTheme.typography.labelSmall, color = Lumi.Sky, maxLines = 2,
+                )
+            }
             val c = if (inPorto) Lumi.Green else Lumi.Blue
             Box(
                 Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))

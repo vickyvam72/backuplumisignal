@@ -125,6 +125,22 @@ object Perms {
         return false
     }
 
+    /** Exact alarms (Android 12+) let the 17:00 signal and the 08:50 audit start on time. */
+    fun exactAlarms(ctx: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return true
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager ?: return true
+        return am.canScheduleExactAlarms()
+    }
+
+    fun requestExactAlarms(ctx: Context) {
+        if (Build.VERSION.SDK_INT < 31) return
+        try {
+            ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}")))
+        } catch (e: Exception) {
+            openAppSettings(ctx)
+        }
+    }
+
     fun openAppSettings(ctx: Context) {
         try {
             ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
@@ -139,6 +155,7 @@ fun PermissionScreen(onDone: () -> Unit) {
     var notif by remember { mutableStateOf(Perms.notifications(ctx)) }
     var bg by remember { mutableStateOf(Perms.background(ctx)) }
     var autoOpened by remember { mutableStateOf(false) }
+    var exact by remember { mutableStateOf(Perms.exactAlarms(ctx)) }
     var notifAsked by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notif = granted || Perms.notifications(ctx)
@@ -147,6 +164,7 @@ fun PermissionScreen(onDone: () -> Unit) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         notif = Perms.notifications(ctx)
         bg = Perms.background(ctx)
+        exact = Perms.exactAlarms(ctx)
     }
 
     // One screen, no scrolling: compact rows and the button pinned to the bottom.
@@ -171,6 +189,10 @@ fun PermissionScreen(onDone: () -> Unit) {
             }
             Spacer(Modifier.height(10.dp))
             PermRow(Icons.Filled.Refresh, "Penghemat baterai", "Kecualikan Lumi agar audit tetap jalan", bg, "Izinkan") { Perms.requestBackground(ctx) }
+            if (Build.VERSION.SDK_INT >= 31) {
+                Spacer(Modifier.height(10.dp))
+                PermRow(Icons.Filled.Notifications, "Alarm tepat waktu", "Sinyal tepat 17.00 & audit mulai 08.50", exact, "Izinkan") { Perms.requestExactAlarms(ctx) }
+            }
             Spacer(Modifier.height(10.dp))
             PermRow(
                 Icons.Filled.PlayArrow, "Autostart / Mulai otomatis", "Xiaomi, Oppo, Vivo, Realme, Infinix: nyalakan Lumi Signal IDX",

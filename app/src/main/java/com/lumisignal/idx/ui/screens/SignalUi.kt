@@ -156,13 +156,19 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                 else -> null
             },
         )
-        if (plan != null) {
+        val entry = sig.entryPrice ?: sig.customEntry
+        if (plan != null && entry != null) {
+            // Real entry and the TP/SL recalculated from it.
+            val (tp, sl) = com.lumisignal.idx.share.ShareCards.levels(sig)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MiniLevel("ENTRY", Fmt.price(sig.entryPrice ?: plan.entryHigh), Lumi.Blue, Modifier.weight(1f))
-                MiniLevel("SL", Fmt.price(plan.stopLoss), Lumi.Red, Modifier.weight(1f))
-                MiniLevel("TP", Fmt.price(plan.tp), Lumi.Green, Modifier.weight(1f))
+                MiniLevel("ENTRY", Fmt.price(entry), Lumi.Blue, Modifier.weight(1f))
+                MiniLevel("SL", Fmt.price(sl), Lumi.Red, Modifier.weight(1f))
+                MiniLevel("TP", Fmt.price(tp), Lumi.Green, Modifier.weight(1f))
             }
+        } else if (plan != null && sig.status == SignalStatus.WAITING) {
+            Spacer(Modifier.height(8.dp))
+            Text("👁 Dipantau · entry, TP & SL muncul di sini setelah terbeli", style = MaterialTheme.typography.labelMedium, color = Lumi.Sky)
         }
         if (sig.statusNote.isNotBlank()) {
             Spacer(Modifier.height(8.dp))

@@ -107,7 +107,7 @@ fun SettingsScreen() {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Saham di Riwayat Strategi dan Porto diaudit dengan high & low harian asli dari Stockbit: tiap menit saat aplikasi terbuka di jam bursa, ±15 menit sekali di latar belakang. Notifikasi muncul saat Radar Besok terbit dan saat harga menyentuh entry, TP, atau SL.",
+                "Saham di Riwayat Strategi dan Porto diaudit dengan high & low harian asli dari Stockbit: tiap 1 menit selama jam bursa, juga di latar belakang (ada notifikasi "Audit harga berjalan"). Notifikasi muncul pukul 17.00 saat saham pantauan terbit, saat saham terbeli (lengkap dengan entry, TP & SL), dan saat kena TP atau SL.",
                 style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
             )
             if (!notif || !bg) {
@@ -143,7 +143,7 @@ fun SettingsScreen() {
             Bullet("Dua jenis sinyal: Profit tinggi (target lebar dari volatilitas atau resisten) dan Winrate tinggi (TP minimal 3% yang sering tersentuh). Saham yang diproses: nilai transaksi rata-rata minimal Rp250 juta per hari.")
             Bullet("Beli di sesi berikutnya: di harga pembukaan bila ≤ closing +1%, kalau dibuka lebih tinggi antre di closing +1%. Tidak terisi di sesi itu = batal. Saham yang masih dipegang tidak direkomendasikan lagi.")
             Bullet("TP dan SL mengikuti fraksi harga IDX (TP dibulatkan ke atas, SL ke bawah) dan dihitung dari harga beli sebenarnya. Kalau belum kena TP/SL, posisi dijual di closing hari terakhir masa hold.")
-            Bullet("Setiap hasil screening yang kamu buka masuk Riwayat Strategi, dan Porto berisi saham pilihanmu. Keduanya diaudit dengan harga Stockbit: tiap menit saat aplikasi terbuka di jam bursa, dan ±15 menit sekali di latar belakang. Winrate = transaksi untung dibagi transaksi selesai; akumulasi P/L = jumlah P/L real.")
+            Bullet("Setiap hasil screening yang kamu buka masuk Riwayat Strategi, dan Porto berisi saham pilihanmu. Keduanya diaudit dengan harga Stockbit: tiap 1 menit selama jam bursa, juga saat aplikasi ditutup. Winrate = transaksi untung dibagi transaksi selesai; akumulasi P/L = jumlah P/L real.")
         }
         Spacer(Modifier.height(16.dp))
 

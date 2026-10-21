@@ -113,6 +113,8 @@ private fun MainNav() {
     // Whenever the app comes to the foreground, refresh open signals (throttled) — no manual button.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         scope.launch { Monitor.refreshIfStale(ctx) }
+        com.lumisignal.idx.service.AuditService.start(ctx)
+        com.lumisignal.idx.service.SignalAlarm.schedule(ctx)
     }
     // Near-realtime audit while the app is open: prices every minute during trading hours.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle

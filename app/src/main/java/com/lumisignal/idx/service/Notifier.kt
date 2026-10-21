@@ -21,6 +21,7 @@ import com.lumisignal.idx.engine.Tracker
 object Notifier {
     const val CH_SIGNALS = "lumi_signals"
     const val CH_SCAN = "lumi_scan"
+    const val CH_AUDIT = "lumi_audit"
     const val SCAN_NOTIF_ID = 4101
     const val EXTRA_OPEN_SIGNAL = "open_signal"
     const val EXTRA_OPEN_SCAN = "open_scan"
@@ -31,6 +32,12 @@ object Notifier {
         nm.createNotificationChannel(
             NotificationChannel(CH_SIGNALS, "Sinyal & pemantauan", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "Radar Besok terbit, dan saat harga posisi menyentuh entry, TP, atau SL"
+            },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_AUDIT, "Audit harga berjalan", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Tanda bahwa harga dicek tiap 1 menit selama jam bursa"
+                setShowBadge(false)
             },
         )
         // The old foreground "screening" channel is gone: screening now runs on the server.
@@ -76,8 +83,15 @@ object Notifier {
             SignalStatus.CANCELLED -> "✖️"
             else -> "🔔"
         }
-        val title = "$emoji ${sig.symbol} — ${Tracker.label(sig.status)}$porto"
-        val text = "${sig.statusNote}. Harga terakhir ${Fmt.price(sig.lastPrice)}."
+        val entry = sig.entryPrice ?: sig.customEntry
+        val bought = entry != null && sig.status != SignalStatus.CANCELLED
+        val title = if (sig.status == SignalStatus.ACTIVE && sig.source != "PORTO") "✅ ${sig.symbol} terbeli di ${Fmt.price(entry)}"
+        else "$emoji ${sig.symbol} — ${Tracker.label(sig.status)}$porto"
+        val text = if (bought) {
+            val (tp, sl) = com.lumisignal.idx.share.ShareCards.levels(sig)
+            "Entry ${Fmt.price(entry)} · TP ${Fmt.price(tp)} · SL ${Fmt.price(sl)}" +
+                (if (sig.status == SignalStatus.ACTIVE) "" else " · keluar ${Fmt.price(sig.exitPrice)}") + ". ${sig.statusNote}."
+        } else "${sig.statusNote}. Harga terakhir ${Fmt.price(sig.lastPrice)}."
         val n = NotificationCompat.Builder(ctx, CH_SIGNALS)
             .setSmallIcon(R.drawable.ic_stat_lumi)
             .setContentTitle(title)

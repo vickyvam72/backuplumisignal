@@ -289,6 +289,17 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
         }
         Spacer(Modifier.height(12.dp))
 
+        // ---- share the analysis as a picture
+        val shareCtx = androidx.compose.ui.platform.LocalContext.current
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Bagikan hasil analisa ini sebagai gambar", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted, modifier = Modifier.weight(1f))
+            ShareReportButton("Bagikan", {
+                val label = if (match != null && day != null) "TOP 5 · " + day.jenisLabel(match.jenis).uppercase() else null
+                com.lumisignal.idx.share.ShareCards.shareAnalysis(shareCtx, symbol, r.name.ifBlank { info?.name ?: "" }, r.refDate, bars, plan, sr, label)
+            })
+        }
+        Spacer(Modifier.height(12.dp))
+
         // ---- porto
         if (existing == null) {
             GradientButton("Tambahkan ke Porto", { dialog = true }, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)

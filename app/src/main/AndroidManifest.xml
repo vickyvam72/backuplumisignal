@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".LumiApp"
@@ -49,6 +51,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/share_paths" />
         </provider>
+        <service
+            android:name=".service.AuditService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Audit harga saham tiap 1 menit selama jam bursa untuk notifikasi entry, TP dan SL" />
+        </service>
         <receiver
             android:name=".service.SignalAlarm"
             android:exported="false">

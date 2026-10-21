@@ -191,8 +191,8 @@ object ShareCards {
         ctx.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    private const val DISCLAIMER = "Alat bantu screening, bukan rekomendasi investasi. Order berlaku 1 sesi: beli di harga pembukaan bila ≤ harga entry, " +
-        "kalau dibuka lebih tinggi antre di harga entry. Selalu gunakan stop loss."
+    private const val DISCLAIMER = "Saham pantauan, bukan rekomendasi investasi. Harga entry, TP dan SL diumumkan di aplikasi " +
+        "begitu saham terbeli di sesi tersebut. Selalu gunakan stop loss."
 
     // ------------------------------------------------------------------ buy signal
 
@@ -204,7 +204,7 @@ object ShareCards {
         val buy = RadarPorto.nextSession(d.date)
         val meta = d.strategy(sid)
         return render(ctx, color) { pen ->
-            var y = header(pen, PAD, "Radar Besok · Sinyal Beli")
+            var y = header(pen, PAD, "Radar Besok · Saham Pantauan")
             y += 56f
             pen.pill(d.jenisLabel(jenis).uppercase(), PAD, y, color, filled = true, size = 32f)
             y += 100f
@@ -215,13 +215,7 @@ object ShareCards {
             y = pen.text(p.ticker, PAD - 6f, y, pen.paint(170f, TEXT, bold = true, num = true))
             if (p.name.isNotBlank()) y = pen.block(p.name, PAD, y + 4f, (W - 2 * PAD).toInt(), pen.paint(32f, DIM))
             y += 44f
-            val gap = 24f
-            val tw = (W - 2 * PAD - 2 * gap) / 3
-            val th = 190f
-            pen.tile(RectF(PAD, y, PAD + tw, y + th), "ENTRY ≤", Fmt.price(p.entryHigh), "harga beli maks.", BLUE)
-            pen.tile(RectF(PAD + tw + gap, y, PAD + 2 * tw + gap, y + th), "TAKE PROFIT", Fmt.price(p.tp), p.tpPct?.let { Fmt.pct(it, decimals = 2) }, GREEN)
-            pen.tile(RectF(PAD + 2 * (tw + gap), y, W - PAD, y + th), "STOP LOSS", Fmt.price(p.sl), p.slPct?.let { Fmt.pct(-it, decimals = 2) }, RED)
-            y += th + 50f
+            y = watchBox(pen, y) + 40f
             // Why it entered the radar: measured on a scratch canvas, then drawn over its box.
             val reasons = p.why.ifEmpty { listOfNotNull(meta?.desc) }
             val boxTop = y
@@ -231,6 +225,17 @@ object ShareCards {
             y = by + 50f
             footer(pen, y, DISCLAIMER)
         }
+    }
+
+    /** "Saham pantauan" note: entry, TP and SL are announced once the stock is bought. Returns the bottom. */
+    private fun watchBox(pen: Pen, top: Float): Float {
+        val inner = (W - 2 * PAD - 80f).toInt()
+        val text = "Entry, TP dan SL diumumkan di Riwayat begitu saham ini terbeli di sesi tersebut, lengkap dengan notifikasi."
+        val h = 36f + 40f + 10f + StaticLayout.Builder.obtain(text, 0, text.length, pen.paint(30f, DIM), inner).build().height + 36f
+        pen.round(RectF(PAD, top, W - PAD, top + h), 30f, alpha(BLUE, 0.12f), alpha(BLUE, 0.5f))
+        val y = pen.text("👁  SAHAM PANTAUAN", PAD + 40f, top + 36f, pen.paint(30f, SKY, bold = true))
+        pen.block(text, PAD + 40f, y + 10f, inner, pen.paint(30f, DIM))
+        return top + h
     }
 
     /** "Kenapa masuk radar" box contents; returns the bottom of the box. */
@@ -255,11 +260,12 @@ object ShareCards {
         val buy = RadarPorto.nextSession(d.date)
         val lists = dayLists(d, tier)
         return render(ctx, GREEN) { pen ->
-            var y = header(pen, PAD, "Radar Besok · Top 5 Saham IDX")
+            var y = header(pen, PAD, "Radar Besok · Saham Pantauan")
             y += 60f
             y = pen.text("SINYAL BELI UNTUK", PAD, y, pen.paint(28f, GREEN, bold = true))
             y = pen.text(Market.prettyDate(buy), PAD, y + 6f, pen.paint(62f, TEXT, bold = true))
-            y += 40f
+            y += 30f
+            y = watchBox(pen, y) + 10f
             for ((j, picks) in lists) {
                 val color = jenisColor(j)
                 y += 20f
@@ -281,16 +287,14 @@ object ShareCards {
                     val why = p.why.firstOrNull() ?: d.strategy(p.sid ?: 0)?.name ?: ""
                     // Measure the row on the scratch pass layout height.
                     val whyH = StaticLayout.Builder.obtain(why, 0, why.length, pen.paint(27f, DIM), inner).build().height
-                    val rh = 30f + 64f + 12f + 54f + 14f + whyH + 26f
+                    val rh = 30f + 64f + 12f + whyH + 26f
                     pen.round(RectF(PAD, rowTop, W - PAD, rowTop + rh), 28f, alpha(SURFACE, 0.9f), alpha(color, 0.35f))
                     var ry = rowTop + 30f
                     pen.text(p.ticker, PAD + 32f, ry - 6f, pen.paint(60f, TEXT, bold = true, num = true))
-                    pen.text("ENTRY ≤ ${Fmt.price(p.entryHigh)}", W - PAD - 32f, ry + 10f, pen.paint(34f, SKY, bold = true, num = true, align = Paint.Align.RIGHT))
+                    d.strategy(p.sid ?: 0)?.name?.let {
+                        pen.text(it, W - PAD - 32f, ry + 14f, pen.paint(28f, SKY, bold = true, align = Paint.Align.RIGHT))
+                    }
                     ry += 64f + 12f
-                    var x = PAD + 32f
-                    x = pen.pill("TP ${Fmt.price(p.tp)}${p.tpPct?.let { " (" + Fmt.pct(it, decimals = 2) + ")" } ?: ""}", x, ry, GREEN, false, 26f) + 14f
-                    pen.pill("SL ${Fmt.price(p.sl)}${p.slPct?.let { " (" + Fmt.pct(-it, decimals = 2) + ")" } ?: ""}", x, ry, RED, false, 26f)
-                    ry += 54f + 14f
                     pen.block(why, PAD + 32f, ry, inner, pen.paint(27f, DIM))
                     y = rowTop + rh + 16f
                 }
@@ -323,11 +327,11 @@ object ShareCards {
         SignalStatus.EXPIRED -> "KELUAR · WAKTU HABIS" to AMBER
     }
 
-    private fun entryOf(sig: Signal) = sig.entryPrice ?: sig.customEntry ?: sig.eval.plan?.entryHigh
+    private fun entryOf(sig: Signal) = sig.entryPrice ?: sig.customEntry
     private fun pnlOf(sig: Signal) = sig.pnlPct.takeIf { sig.status != SignalStatus.CANCELLED && sig.entryPrice != null }
 
     fun signalBitmap(ctx: Context, sig: Signal): Bitmap {
-        val (tp, sl) = levels(sig)
+        val (tp, sl) = if (entryOf(sig) != null) levels(sig) else null to null
         val entry = entryOf(sig)
         val pnl = pnlOf(sig)
         val (stLabel, stColor) = statusInfo(sig)
@@ -393,6 +397,7 @@ object ShareCards {
         val buy: String?,
         val sell: String?,
         val hold: Int?,
+        val entry: Double?,
         val tp: Double?,
         val sl: Double?,
         val pnl: Double?,
@@ -417,8 +422,9 @@ object ShareCards {
             buy = sig.entryDate.takeIf { bought },
             sell = sig.exitDate.takeIf { bought && !sig.isOpen },
             hold = sig.holdDays.takeIf { bought },
-            tp = tp,
-            sl = sl,
+            entry = sig.entryPrice.takeIf { bought },
+            tp = tp.takeIf { bought },
+            sl = sl.takeIf { bought },
             pnl = pnlOf(sig),
             status = when (sig.status) {
                 SignalStatus.TP -> "TP"
@@ -433,7 +439,7 @@ object ShareCards {
 
     fun rowOf(t: com.lumisignal.idx.data.BtTrade) = ReportRow(
         ticker = t.ticker, signal = t.signal, buy = t.buy, sell = t.sell, hold = t.hold,
-        tp = t.tp, sl = t.sl, pnl = t.pnl, status = t.exit,
+        entry = t.entry, tp = t.tp, sl = t.sl, pnl = t.pnl, status = t.exit,
     )
 
     private fun statusColor(s: String) = when (s) {
@@ -451,8 +457,8 @@ object ShareCards {
 
     /** Column x positions (left edges) and widths of the trade table. */
     private val COLS = listOf(
-        "KODE" to 172f, "BELI" to 132f, "JUAL" to 132f, "HOLD" to 100f,
-        "TP" to 130f, "SL" to 130f, "P/L" to 140f,
+        "KODE" to 148f, "BELI" to 112f, "JUAL" to 112f, "HOLD" to 82f,
+        "ENTRY" to 118f, "TP" to 118f, "SL" to 116f, "P/L" to 130f,
     )
 
     /** The report as one or more pages (pictures) of the same size. */
@@ -536,6 +542,7 @@ object ShareCards {
                     row.buy?.let { Market.shortDate(it) } ?: if (row.status == "Batal") "batal" else "–",
                     row.sell?.let { Market.shortDate(it) } ?: "–",
                     row.hold?.let { "$it hr" } ?: "–",
+                    row.entry?.let { Fmt.price(it) } ?: "–",
                     Fmt.price(row.tp),
                     Fmt.price(row.sl),
                     row.pnl?.let { Fmt.pct(it, decimals = 2) } ?: "–",
@@ -545,12 +552,13 @@ object ShareCards {
                     val (_, w) = COLS[k]
                     val paint = when (k) {
                         0 -> pen.paint(30f, TEXT, bold = true, num = true)
-                        6 -> pen.paint(28f, row.pnl?.let { if (it >= 0) GREEN else RED } ?: MUTED, bold = true, num = true, align = Paint.Align.RIGHT)
-                        4 -> pen.paint(26f, GREEN, num = true)
-                        5 -> pen.paint(26f, RED, num = true)
+                        7 -> pen.paint(27f, row.pnl?.let { if (it >= 0) GREEN else RED } ?: MUTED, bold = true, num = true, align = Paint.Align.RIGHT)
+                        4 -> pen.paint(26f, SKY, num = true)
+                        5 -> pen.paint(26f, GREEN, num = true)
+                        6 -> pen.paint(26f, RED, num = true)
                         else -> pen.paint(25f, DIM, num = k == 3)
                     }
-                    pen.text(v, if (k == 6) cx + w - 8f else cx, ty + if (k == 0 || k == 6) 0f else 3f, paint)
+                    pen.text(v, if (k == 7) cx + w - 8f else cx, ty + if (k == 0 || k == 7) 0f else 3f, paint)
                     cx += w
                 }
                 y += ROW_H
@@ -579,4 +587,110 @@ object ShareCards {
         val b = RadarPorto.nextSession(toSignal)
         return if (a == b) Market.prettyDate(a) else "${Market.prettyDate(a, false)} – ${Market.prettyDate(b, false)}"
     }
+
+    // ------------------------------------------------------------------ stock check (Cek Saham)
+
+    /**
+     * Analysis of one stock: price, buy area, TP & SL, two supports and two resistances, a small candle
+     * chart with those levels, and whether it is in today's Top 5.
+     */
+    fun analysisBitmap(
+        ctx: Context,
+        symbol: String,
+        name: String,
+        refDate: String,
+        bars: List<com.lumisignal.idx.data.Bar>,
+        plan: com.lumisignal.idx.data.TradePlan,
+        sr: com.lumisignal.idx.engine.SupportResistance,
+        radarLabel: String?,
+    ): Bitmap {
+        val last = bars.last()
+        val prev = bars.getOrNull(bars.size - 2)
+        val chg = Market.changePct(last, prev)
+        return render(ctx, SKY) { pen ->
+            var y = header(pen, PAD, "Cek Saham · Hasil Analisa")
+            y += 50f
+            var x = PAD
+            if (radarLabel != null) x = pen.pill(radarLabel, PAD, y, GREEN, filled = true, size = 28f) + 14f
+            pen.pill("Data closing ${Market.prettyDate(refDate, false)}", x, y, SKY, false, 28f)
+            y += 92f
+            pen.text(symbol, PAD - 6f, y, pen.paint(150f, TEXT, bold = true, num = true))
+            val px = pen.paint(70f, TEXT, bold = true, num = true, align = Paint.Align.RIGHT)
+            pen.text(Fmt.price(last.close), W - PAD, y + 20f, px)
+            pen.text(Fmt.pct(chg), W - PAD, y + 110f, pen.paint(34f, if (chg >= 0) GREEN else RED, bold = true, num = true, align = Paint.Align.RIGHT))
+            y += 176f
+            if (name.isNotBlank()) y = pen.block(name, PAD, y, (W - 2 * PAD).toInt(), pen.paint(32f, DIM))
+            y += 36f
+            // Plan tiles.
+            val gap = 24f
+            val tw = (W - 2 * PAD - 2 * gap) / 3
+            val th = 190f
+            val ref = plan.entryHigh
+            pen.tile(RectF(PAD, y, PAD + tw, y + th), "AREA BELI", Fmt.price(ref), "maks. harga beli", BLUE)
+            pen.tile(RectF(PAD + tw + gap, y, PAD + 2 * tw + gap, y + th), "TAKE PROFIT", Fmt.price(plan.tp), Fmt.pct(Market.pct(plan.tp, ref), decimals = 2), GREEN)
+            pen.tile(RectF(PAD + 2 * (tw + gap), y, W - PAD, y + th), "STOP LOSS", Fmt.price(plan.stopLoss), Fmt.pct(Market.pct(plan.stopLoss, ref), decimals = 2), RED)
+            y += th + 30f
+            // Support & resistance.
+            val resColor = 0xFFFF9F43.toInt()
+            val supColor = 0xFFB98BFF.toInt()
+            val lv = listOf(
+                Triple("RESISTANCE 2", sr.resistances.getOrNull(1)?.price, resColor),
+                Triple("RESISTANCE 1", sr.resistances.getOrNull(0)?.price, resColor),
+                Triple("SUPPORT 1", sr.supports.getOrNull(0)?.price, supColor),
+                Triple("SUPPORT 2", sr.supports.getOrNull(1)?.price, supColor),
+            )
+            val sw = (W - 2 * PAD - 3 * 18f) / 4
+            lv.forEachIndexed { i, (label, price, col) ->
+                val left = PAD + i * (sw + 18f)
+                pen.round(RectF(left, y, left + sw, y + 130f), 24f, alpha(col, 0.12f), alpha(col, 0.5f))
+                pen.text(label, left + 20f, y + 22f, pen.paint(21f, col, bold = true))
+                pen.text(Fmt.price(price), left + 20f, y + 58f, pen.paint(44f, TEXT, bold = true, num = true))
+            }
+            y += 130f + 30f
+            // Small candle chart with the levels.
+            val chartTop = y
+            val ch = 520f
+            pen.round(RectF(PAD, chartTop, W - PAD, chartTop + ch), 30f, alpha(SURFACE, 0.85f), BORDER)
+            val show = bars.takeLast(60)
+            val levels = listOfNotNull(
+                plan.tp.takeIf { it > 0 }?.let { it to GREEN },
+                ref.let { it to BLUE },
+                plan.stopLoss.takeIf { it > 0 }?.let { it to RED },
+            ) + lv.mapNotNull { (_, p, c) -> p?.let { it to c } }
+            val hi = maxOf(show.maxOf { it.high }, levels.maxOf { it.first })
+            val lo = minOf(show.minOf { it.low }, levels.minOf { it.first })
+            val left = PAD + 24f
+            val right = W - PAD - 130f
+            val top = chartTop + 30f
+            val bottom = chartTop + ch - 30f
+            fun yOf(v: Double) = (bottom - (v - lo) / (hi - lo).coerceAtLeast(1e-9) * (bottom - top)).toFloat()
+            val step = (right - left) / show.size
+            val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 2f; style = Paint.Style.STROKE; pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f, 8f), 0f) }
+            for ((v, c) in levels) {
+                line.color = alpha(c, 0.85f)
+                val ly = yOf(v)
+                pen.c.drawLine(left, ly, right + 8f, ly, line)
+                pen.text(Fmt.price(v), right + 16f, ly - 15f, pen.paint(22f, c, bold = true, num = true))
+            }
+            val body = Paint(Paint.ANTI_ALIAS_FLAG)
+            show.forEachIndexed { i, b ->
+                val cx = left + step * i + step / 2
+                body.color = if (b.close >= b.open) GREEN else RED
+                body.strokeWidth = 2f
+                pen.c.drawLine(cx, yOf(b.high), cx, yOf(b.low), body)
+                val t = yOf(maxOf(b.open, b.close))
+                val btm = yOf(minOf(b.open, b.close)).coerceAtLeast(t + 2f)
+                pen.c.drawRect(cx - step * 0.35f, t, cx + step * 0.35f, btm, body)
+            }
+            y = chartTop + ch + 16f
+            y = pen.block("Candle harian 60 sesi terakhir · garis: area beli (biru), TP (hijau), SL (merah), resistance (oranye), support (ungu)", PAD, y, (W - 2 * PAD).toInt(), pen.paint(22f, MUTED))
+            y += 30f
+            footer(pen, y, "Hasil analisa otomatis dari support & resistance terdekat, bukan rekomendasi investasi. Selalu gunakan stop loss.")
+        }
+    }
+
+    fun shareAnalysis(
+        ctx: Context, symbol: String, name: String, refDate: String, bars: List<com.lumisignal.idx.data.Bar>,
+        plan: com.lumisignal.idx.data.TradePlan, sr: com.lumisignal.idx.engine.SupportResistance, radarLabel: String?,
+    ) = sendImages(ctx, listOf(analysisBitmap(ctx, symbol, name, refDate, bars, plan, sr, radarLabel)), "analisa-$symbol-$refDate", "Bagikan analisa $symbol")
 }

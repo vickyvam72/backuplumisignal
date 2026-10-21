@@ -91,6 +91,13 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
     val bars: List<Bar> = remember(d.date, ticker) { d.barsOf(ticker) }
     val sr = remember(d.date, ticker) { Levels.of(bars) }
     val porto = remember(items, d.date) { RadarPorto.find(d.date, tier, jenis, sid, ticker, combined) }
+    val strat = remember(items, d.date) { items.firstOrNull { it.id == RadarPorto.key(d.date, tier, jenis, sid, ticker, combined) } }
+    val filledPlan = remember(strat) {
+        strat?.takeIf { it.entryPrice != null }?.let { s ->
+            val (t, l) = com.lumisignal.idx.share.ShareCards.levels(s)
+            plan.copy(tp = t ?: plan.tp, stopLoss = l ?: plan.stopLoss)
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -133,24 +140,31 @@ fun RadarPickScreen(tier: String, jenis: String, sid: Int, ticker: String, combi
             }
             Spacer(Modifier.height(12.dp))
 
-            GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue) {
-                SectionHeader("Rencana trading", subtitle = "Harga TP/SL di bawah dihitung dari batas beli ${Fmt.price(pick.entryHigh)}")
-                Spacer(Modifier.height(14.dp))
-                PlanPanel(plan)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Kalau terbeli lebih murah (dibuka di bawah batas), TP dan SL ikut dihitung ulang dari harga beli itu dengan aturan yang sama — " +
-                        "Lumi melakukannya otomatis untuk posisi di Porto.",
-                    style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
-                )
+            // Watchlist until bought: entry, TP and SL are shown once the strategy entry has filled.
+            if (filledPlan != null && strat?.entryPrice != null) {
+                GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Blue) {
+                    SectionHeader("Rencana trading", subtitle = "Terbeli di ${Fmt.price(strat.entryPrice)} pada ${Market.shortDate(strat.entryDate ?: "")} · TP/SL dari harga beli itu")
+                    Spacer(Modifier.height(14.dp))
+                    PlanPanel(filledPlan, entryPrice = strat.entryPrice)
+                }
+            } else {
+                GlassCard(Modifier.fillMaxWidth(), accent = Lumi.Sky) {
+                    SectionHeader("👁 Saham pantauan", subtitle = "Entry, TP & SL belum diumumkan")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (strat?.status == com.lumisignal.idx.data.SignalStatus.CANCELLED) "Saham ini tidak terbeli di sesi ${Market.prettyDate(RadarPorto.nextSession(d.date), false)}, jadi sinyalnya batal."
+                        else "Harga entry, TP dan SL akan muncul di Riwayat Strategi begitu saham ini terbeli di sesi ${Market.prettyDate(RadarPorto.nextSession(d.date), false)}. Kamu akan menerima notifikasi saat itu terjadi.",
+                        style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
+                    )
+                }
             }
             Spacer(Modifier.height(12.dp))
 
             if (bars.isNotEmpty()) {
                 GlassCard(Modifier.fillMaxWidth(), padding = 12.dp) {
-                    SectionHeader("Chart & level trading", subtitle = "Beli, TP, SL, support (ungu) & resistance (oranye)")
+                    SectionHeader("Chart & level trading", subtitle = if (filledPlan != null) "Beli, TP, SL, support (ungu) & resistance (oranye)" else "Support (ungu) & resistance (oranye)")
                     Spacer(Modifier.height(10.dp))
-                    CandleChart(bars = bars, plan = plan, signalDate = d.date, height = 320.dp, levels = srChartLevels(sr))
+                    CandleChart(bars = bars, plan = filledPlan, signalDate = d.date, height = 320.dp, levels = srChartLevels(sr))
                 }
                 Spacer(Modifier.height(12.dp))
                 GlassCard(Modifier.fillMaxWidth(), accent = SupportColor) {

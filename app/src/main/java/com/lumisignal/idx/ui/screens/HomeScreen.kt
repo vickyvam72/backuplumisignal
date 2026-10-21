@@ -192,7 +192,7 @@ private fun RefreshNote(d: RadarDay, @Suppress("UNUSED_PARAMETER") tick: Int) {
     val waiting = Market.isWeekday(now.toLocalDate()) && now.toLocalTime() >= RadarRepo.READY_AT && d.date < RadarRepo.expectedDate(now)
     val text = when {
         waiting -> "Sinyal hari ini sedang disiapkan server dan akan muncul sebentar lagi (atau hari ini libur bursa)."
-        else -> "Sinyal beli diperbarui otomatis setiap hari bursa pukul 17.00 WIB. Kamu akan menerima notifikasi, dan semua sinyal langsung masuk Riwayat Strategi."
+        else -> "Saham pantauan diperbarui otomatis setiap hari bursa pukul 17.00 WIB dan langsung masuk Riwayat Strategi. Harga entry, TP & SL baru muncul di Riwayat begitu saham terbeli, lengkap dengan notifikasi."
     }
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lumi.Amber.copy(alpha = 0.1f))

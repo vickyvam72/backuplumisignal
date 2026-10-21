@@ -111,9 +111,15 @@ class ScreensTest {
                 buy = if (st == "Menunggu" || st == "Batal") null else sig,
                 sell = if (st in listOf("TP", "SL", "Waktu")) "2026-09-%02d".format(minOf(28, 3 + i % 28)) else null,
                 hold = if (st in listOf("TP", "SL", "Waktu", "Hold")) 1 + i % 7 else null,
-                tp = 100.0 + i, sl = 90.0 + i,
+                entry = if (st == "Menunggu" || st == "Batal") null else 95.0 + i, tp = 100.0 + i, sl = 90.0 + i,
                 pnl = when (st) { "TP" -> 8.33; "SL" -> -7.5; "Waktu" -> 1.2; "Hold" -> 2.0; else -> null }, status = st,
             )
+        }
+        run {
+            val bars = day.barsOf(top.ticker)
+            val sr = com.lumisignal.idx.engine.Levels.of(bars)
+            val plan = com.lumisignal.idx.engine.Levels.manualPlan(bars, sr)
+            save("15-share-analisa", share.analysisBitmap(ctx, top.ticker, top.name, day.date, bars, plan, sr, "TOP 5 · PROFIT TINGGI"))
         }
         share.reportPages(ctx, com.lumisignal.idx.share.ShareCards.Report("Backtest", "profit", "September 2026", fake))
             .forEachIndexed { i, b -> save("14-share-laporan-${i + 1}", b) }

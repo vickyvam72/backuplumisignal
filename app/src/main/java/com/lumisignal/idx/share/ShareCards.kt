@@ -488,11 +488,12 @@ object ShareCards {
                 // Summary tiles.
                 val closed = r.rows.filter { it.status == "TP" || it.status == "SL" || it.status == "Waktu" }
                 val acc = closed.mapNotNull { it.pnl }.takeIf { it.isNotEmpty() }?.sum()
-                val gap = 18f
-                val tw = (W - 2 * PAD - 3 * gap) / 4
+                val gap = 14f
+                val tw = (W - 2 * PAD - 4 * gap) / 5
                 val th = 150f
                 val tiles = listOf(
                     Triple("TRANSAKSI", "${r.rows.size}", SKY),
+                    Triple("HOLD", "${r.rows.count { it.status == "Hold" }}", BLUE),
                     Triple("KENA TP", "${r.rows.count { it.status == "TP" }}", GREEN),
                     Triple("KENA SL", "${r.rows.count { it.status == "SL" }}", RED),
                     Triple("AKUMULASI P/L", acc?.let { Fmt.pct(it, decimals = 2) } ?: "–", if ((acc ?: 0.0) >= 0) GREEN else RED),
@@ -501,16 +502,15 @@ object ShareCards {
                     val left = PAD + i * (tw + gap)
                     val rect = RectF(left, y, left + tw, y + th)
                     pen.round(rect, 26f, alpha(color, 0.12f), alpha(color, 0.5f))
-                    pen.text(label, left + 22f, y + 24f, pen.paint(22f, color, bold = true))
+                    pen.text(label, left + 18f, y + 24f, pen.paint(if (label.length > 10) 17f else 21f, color, bold = true))
                     var size = 54f
                     var vp = pen.paint(size, TEXT, bold = true, num = true)
-                    while (vp.measureText(value) > tw - 40f && size > 24f) { size -= 2f; vp = pen.paint(size, TEXT, bold = true, num = true) }
+                    while (vp.measureText(value) > tw - 32f && size > 24f) { size -= 2f; vp = pen.paint(size, TEXT, bold = true, num = true) }
                     pen.text(value, left + 22f, y + 64f, vp)
                 }
                 y += th + 16f
                 val extra = listOfNotNull(
                     r.rows.count { it.status == "Waktu" }.takeIf { it > 0 }?.let { "$it keluar karena waktu habis" },
-                    r.rows.count { it.status == "Hold" }.takeIf { it > 0 }?.let { "$it masih dipegang" },
                     r.rows.count { it.status == "Menunggu" }.takeIf { it > 0 }?.let { "$it menunggu entry" },
                     r.rows.count { it.status == "Batal" }.takeIf { it > 0 }?.let { "$it batal (tidak terbeli)" },
                 )

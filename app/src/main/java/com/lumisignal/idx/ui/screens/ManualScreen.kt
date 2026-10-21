@@ -242,6 +242,21 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
         }
         Spacer(Modifier.height(12.dp))
 
+        // ---- actions first: add to the portfolio and share the analysis
+        val shareCtx = androidx.compose.ui.platform.LocalContext.current
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (existing == null) {
+                GradientButton("Tambahkan ke Porto", { dialog = true }, Modifier.weight(1f), icon = Icons.Filled.Add)
+            } else {
+                GhostButton("Sudah di Porto", { onOpenSignal(existing.id) }, Modifier.weight(1f), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
+            }
+            ShareReportButton("Bagikan", {
+                val label = if (match != null && day != null) "TOP 5 · " + day.jenisLabel(match.jenis).uppercase() else null
+                com.lumisignal.idx.share.ShareCards.shareAnalysis(shareCtx, symbol, r.name.ifBlank { info?.name ?: "" }, r.refDate, bars, plan, sr, label)
+            })
+        }
+        Spacer(Modifier.height(12.dp))
+
         // ---- radar signal banner
         if (match != null && day != null) {
             val meta = day.strategy(match.sid)
@@ -286,30 +301,6 @@ private fun StockAnalysis(symbol: String, onOpenPick: OpenPick, onOpenSignal: (S
             SectionHeader("Support & resistance", subtitle = "Area harga tempat saham biasanya memantul")
             Spacer(Modifier.height(8.dp))
             LevelsPanel(sr, t.close)
-        }
-        Spacer(Modifier.height(12.dp))
-
-        // ---- share the analysis as a picture
-        val shareCtx = androidx.compose.ui.platform.LocalContext.current
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Bagikan hasil analisa ini sebagai gambar", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted, modifier = Modifier.weight(1f))
-            ShareReportButton("Bagikan", {
-                val label = if (match != null && day != null) "TOP 5 · " + day.jenisLabel(match.jenis).uppercase() else null
-                com.lumisignal.idx.share.ShareCards.shareAnalysis(shareCtx, symbol, r.name.ifBlank { info?.name ?: "" }, r.refDate, bars, plan, sr, label)
-            })
-        }
-        Spacer(Modifier.height(12.dp))
-
-        // ---- porto
-        if (existing == null) {
-            GradientButton("Tambahkan ke Porto", { dialog = true }, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Saham di Porto dipantau otomatis: kapan terbeli, kena TP, kena SL, atau habis masa hold — lengkap dengan notifikasi.",
-                style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted,
-            )
-        } else {
-            GhostButton("Sudah di Porto · lihat posisi", { onOpenSignal(existing.id) }, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
         }
         Spacer(Modifier.height(12.dp))
 

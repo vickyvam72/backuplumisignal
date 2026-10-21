@@ -96,6 +96,11 @@ class CacheStore(private val context: Context) {
         get() = prefs.getString("last_token_refresh", "") ?: ""
         set(v) = prefs.edit().putString("last_token_refresh", v).apply()
 
+    /** Day the after-close recap was sent. */
+    var lastRecapDay: String
+        get() = prefs.getString("last_recap", "") ?: ""
+        set(v) = prefs.edit().putString("last_recap", v).apply()
+
     var loginNotifiedDay: String
         get() = prefs.getString("login_notified", "") ?: ""
         set(v) = prefs.edit().putString("login_notified", v).apply()

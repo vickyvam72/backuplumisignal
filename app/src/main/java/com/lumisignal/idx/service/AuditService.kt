@@ -91,6 +91,8 @@ class AuditService : Service() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setColor(0xFF3D8BFF.toInt())
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setShowWhen(false)
             .setContentIntent(open)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()

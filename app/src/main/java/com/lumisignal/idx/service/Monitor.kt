@@ -60,7 +60,43 @@ object Monitor {
     private val runLock = kotlinx.coroutines.sync.Mutex()
 
     /** One pass at a time (app, worker, alarm and the audit service can overlap). */
-    suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int = runLock.withLock { runPass(ctx, forceDaily) }
+    suspend fun runOnce(ctx: Context, forceDaily: Boolean = false): Int = runLock.withLock {
+        val n = runPass(ctx, forceDaily)
+        dailyRecap(ctx)
+        n
+    }
+
+    /**
+     * Once per trading day after the close (from 16:20 WIB, after the final prices are in): holds, TP,
+     * SL and cumulative P/L of the strategy history and of the portfolio.
+     */
+    private fun dailyRecap(ctx: Context) {
+        try {
+            val now = Market.now()
+            val today = Market.today()
+            if (!Market.isWeekday(now.toLocalDate()) || now.toLocalTime() < java.time.LocalTime.of(16, 20)) return
+            if (Graph.cache.lastRecapDay == today) return
+            val items = Graph.history.items.value
+            // Only on a day the market traded (holidays have no bar for today).
+            val traded = RadarRepo.day.value?.date == today || items.any { s -> s.trackBars.any { it.date == today } }
+            if (!traded) return
+            // Final prices of today must be in (the post-close fetch has run) unless nothing is open.
+            if (items.any { it.isOpen } && Graph.cache.lastDailyKey != "$today-c") return
+            Graph.cache.lastRecapDay = today
+            val tier = com.lumisignal.idx.UiConfig.FIXED_TIER
+            val strat = items.filter { it.source == com.lumisignal.idx.data.SOURCE_STRATEGY && it.radar?.tier == tier && it.radar?.combined == true }
+            val porto = items.filter { it.source == com.lumisignal.idx.data.SOURCE_PORTO }
+            fun line(name: String, list: List<Signal>): String? {
+                if (list.isEmpty()) return null
+                val st = com.lumisignal.idx.ui.components.winStats(list)
+                return "$name: ${st.holding} hold · ${st.tp} TP · ${st.sl} SL · akumulasi P/L ${st.totalPnl?.let { com.lumisignal.idx.engine.Fmt.pct(it, decimals = 2) } ?: "–"}"
+            }
+            val lines = listOfNotNull(line("Riwayat Strategi", strat), line("Porto", porto))
+            if (lines.isEmpty()) return
+            Notifier.dailyRecap(ctx, "📊 Rekap pasar ${Market.prettyDate(today)}", lines.joinToString("\n"))
+        } catch (e: Exception) {
+        }
+    }
 
     private suspend fun runPass(ctx: Context, forceDaily: Boolean): Int {
         checkRadar(ctx)
@@ -138,9 +174,9 @@ object Monitor {
             tracked = tracked.copy(lastUpdate = System.currentTimeMillis())
             if (tracked.status != sig.status || tracked.exitPrice != sig.exitPrice) {
                 changed++
-                // Portfolio positions notify every change; screening results when bought (entry, TP & SL announced) and at TP or SL.
+                // Notify only when bought (entry, TP & SL announced) and at TP or SL, for history and portfolio alike.
                 if (tracked.status != sig.status &&
-                    (sig.source == com.lumisignal.idx.data.SOURCE_PORTO || tracked.status == com.lumisignal.idx.data.SignalStatus.TP ||
+                    (tracked.status == com.lumisignal.idx.data.SignalStatus.TP ||
                         tracked.status == com.lumisignal.idx.data.SignalStatus.SL || tracked.status == com.lumisignal.idx.data.SignalStatus.ACTIVE)
                 ) Notifier.statusChanged(ctx, tracked)
             }

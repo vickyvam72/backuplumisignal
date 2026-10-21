@@ -21,7 +21,8 @@ import com.lumisignal.idx.engine.Tracker
 object Notifier {
     const val CH_SIGNALS = "lumi_signals"
     const val CH_SCAN = "lumi_scan"
-    const val CH_AUDIT = "lumi_audit"
+    /** Minimum importance: no sound, no status-bar icon, folded at the bottom of the shade. */
+    const val CH_AUDIT = "lumi_audit_min"
     const val SCAN_NOTIF_ID = 4101
     const val EXTRA_OPEN_SIGNAL = "open_signal"
     const val EXTRA_OPEN_SCAN = "open_scan"
@@ -35,11 +36,14 @@ object Notifier {
             },
         )
         nm.createNotificationChannel(
-            NotificationChannel(CH_AUDIT, "Audit harga berjalan", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Tanda bahwa harga dicek tiap 1 menit selama jam bursa"
+            NotificationChannel(CH_AUDIT, "Audit harga (latar belakang)", NotificationManager.IMPORTANCE_MIN).apply {
+                description = "Wajib dari Android untuk audit tiap 1 menit. Tidak berbunyi dan tidak tampil di status bar; boleh dimatikan, audit tetap jalan."
                 setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
             },
         )
+        nm.deleteNotificationChannel("lumi_audit")
         // The old foreground "screening" channel is gone: screening now runs on the server.
         nm.deleteNotificationChannel(CH_SCAN)
     }
@@ -103,6 +107,24 @@ object Notifier {
             .build()
         try {
             NotificationManagerCompat.from(ctx).notify(sig.id.hashCode(), n)
+        } catch (e: SecurityException) {
+        }
+    }
+
+    /** After the close: holds, TP, SL and cumulative P/L of the strategy history and the portfolio. */
+    fun dailyRecap(ctx: Context, title: String, text: String) {
+        if (!canNotify(ctx)) return
+        val n = NotificationCompat.Builder(ctx, CH_SIGNALS)
+            .setSmallIcon(R.drawable.ic_stat_lumi)
+            .setContentTitle(title)
+            .setContentText(text.lineSequence().firstOrNull() ?: text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setColor(0xFF3D8BFF.toInt())
+            .setAutoCancel(true)
+            .setContentIntent(openIntent(ctx, EXTRA_OPEN_SCAN, "1", 5))
+            .build()
+        try {
+            NotificationManagerCompat.from(ctx).notify(SCAN_NOTIF_ID + 2, n)
         } catch (e: SecurityException) {
         }
     }

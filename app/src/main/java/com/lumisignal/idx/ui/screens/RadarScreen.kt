@@ -568,7 +568,22 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
                 val sub = if (combined) d.strategy(sid)?.name ?: p.name else p.name
                 if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
+            // Portfolio button at the top, next to share.
+            val c = if (inPorto) Lumi.Green else Lumi.Blue
+            Box(
+                Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
+                    .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(17.dp))
+                    .clickable { if (inPorto) onClick() else dialog = true }.padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (inPorto) "✓ Di Porto" else "+ Porto",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (inPorto) Lumi.Green else Lumi.Text, maxLines = 1,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             val shareCtx = LocalContext.current
             ShareIcon({ com.lumisignal.idx.share.ShareCards.sharePick(shareCtx, d, jenis, p, sid) }, 34.dp)
         }
@@ -576,26 +591,13 @@ fun PickRow(d: RadarDay, tier: String, jenis: String, p: RadarPick, sid: Int, co
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Watchlist: entry, TP and SL are announced in the history (with a notification) once bought.
             Row(
-                Modifier.weight(2f).height(42.dp).clip(RoundedCornerShape(10.dp)).background(Lumi.Sky.copy(alpha = 0.08f))
+                Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(10.dp)).background(Lumi.Sky.copy(alpha = 0.08f))
                     .border(1.dp, Lumi.Sky.copy(alpha = 0.3f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     "👁 Dipantau · entry, TP & SL muncul di Riwayat setelah terbeli",
-                    style = MaterialTheme.typography.labelSmall, color = Lumi.Sky, maxLines = 2,
-                )
-            }
-            val c = if (inPorto) Lumi.Green else Lumi.Blue
-            Box(
-                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
-                    .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-                    .clickable { if (inPorto) onClick() else dialog = true }.padding(horizontal = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    if (inPorto) "✓ Sudah di Porto" else "+ Tambahkan ke Porto",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
-                    color = if (inPorto) Lumi.Green else Lumi.Text, maxLines = 2,
+                    style = MaterialTheme.typography.labelSmall, color = Lumi.Sky, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
         }

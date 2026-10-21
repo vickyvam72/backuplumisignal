@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,6 +135,28 @@ fun SignalRow(sig: Signal, onOpen: () -> Unit) {
                     sig.radar?.name ?: Strategy.byId(sig.strategyId).title, style = MaterialTheme.typography.bodySmall, color = Lumi.TextDim,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
+            }
+            // Strategy history: add to the portfolio from the top of the card.
+            if (sig.source == com.lumisignal.idx.data.SOURCE_STRATEGY) {
+                val items by com.lumisignal.idx.Graph.history.items.collectAsStateWithLifecycle()
+                val inPorto = androidx.compose.runtime.remember(items, sig.id) {
+                    items.any { it.source == com.lumisignal.idx.data.SOURCE_PORTO && it.linkedId == sig.id }
+                }
+                var dialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                if (dialog) PortoDialog(sig, onDismiss = { dialog = false }) { price ->
+                    dialog = false
+                    com.lumisignal.idx.engine.Scanner.addToPorto(sig, price)
+                }
+                val c = if (inPorto) Lumi.Green else Lumi.Blue
+                Box(
+                    Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(c.copy(alpha = if (inPorto) 0.12f else 0.22f))
+                        .border(1.dp, c.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .clickable { if (!inPorto) dialog = true else onOpen() }.padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(if (inPorto) "✓ Di Porto" else "+ Porto", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = if (inPorto) Lumi.Green else Lumi.Text)
+                }
+                Spacer(Modifier.width(8.dp))
             }
             ShareIcon({ com.lumisignal.idx.share.ShareCards.shareSignal(shareCtx, sig) }, 32.dp)
             Spacer(Modifier.width(8.dp))

@@ -220,6 +220,14 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                 }
             }
             Spacer(Modifier.height(12.dp))
+            // Portfolio action at the top.
+            when {
+                sig.source == SOURCE_PORTO ->
+                    GhostButton("Hapus dari Porto", onDelete, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
+                porto == null -> GradientButton("Masukkan Porto", onPorto, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
+                else -> GhostButton("Sudah ada di Porto", {}, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
+            }
+            Spacer(Modifier.height(12.dp))
             TrackingCard(sig)
             Spacer(Modifier.height(12.dp))
             plan?.let {
@@ -268,13 +276,6 @@ private fun RadarSignalDetail(sig: Signal, chartBars: List<Bar>, onBack: () -> U
                     Spacer(Modifier.height(4.dp))
                     Text("Syarat: ${tag.desc}", style = MaterialTheme.typography.bodySmall, color = Lumi.TextMuted)
                 }
-            }
-            Spacer(Modifier.height(12.dp))
-            when {
-                sig.source == SOURCE_PORTO ->
-                    GhostButton("Hapus dari Porto", onDelete, Modifier.fillMaxWidth(), icon = Icons.Filled.Delete, color = Lumi.Red)
-                porto == null -> GradientButton("Masukkan Porto", onPorto, Modifier.fillMaxWidth(), icon = Icons.Filled.Add)
-                else -> GhostButton("Sudah ada di Porto", {}, Modifier.fillMaxWidth(), icon = Icons.Filled.CheckCircle, color = Lumi.Green)
             }
             Spacer(Modifier.height(28.dp))
         }

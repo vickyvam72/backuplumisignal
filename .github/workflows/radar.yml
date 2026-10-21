@@ -3,62 +3,91 @@ name: Radar Besok
 # Daily screening of every IDX stock with the calibrated "Radar Besok" strategies, published to the
 # `market-data` branch where the Lumi Signal app reads it (released to users at 17:00 WIB).
 #
-# GitHub often starts scheduled runs hours late (5–7 h observed). So the workflow is also scheduled
-# early in the day: the first run that starts waits until 16:20 WIB, screens right after the close and
-# publishes ±16:30. Runs that find today's radar already published stop at once.
+# GitHub starts scheduled runs hours late (5–8 h observed, sometimes not at all), so the timing does
+# not rely on `schedule`. The workflow keeps itself alive as a clock: each run waits (at most ~5.5 h,
+# under the 6 h job limit) toward 16:20 WIB of the next trading day, screens when it gets there, and
+# then dispatches its next run. A workflow_dispatch made with GITHUB_TOKEN is allowed to start a run.
+# The crons below only restart the clock if a link of the chain is ever lost.
 on:
   schedule:
-    - cron: "0 2 * * 1-5"
-    - cron: "0 3 * * 1-5"
-    - cron: "0 4 * * 1-5"
-    - cron: "0 5 * * 1-5"
-    - cron: "0 6 * * 1-5"
-    - cron: "0 7 * * 1-5"
-    - cron: "0 8 * * 1-5"
-    - cron: "25 9 * * 1-5"
-    - cron: "15 10 * * 1-5"
-    - cron: "0 11 * * 1-5"
+    - cron: "0 0 * * *"
+    - cron: "0 6 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 18 * * *"
   workflow_dispatch:
+    inputs:
+      clock:
+        description: "Run as the clock (wait for 16:20 WIB) instead of screening now"
+        type: boolean
+        default: false
+      after:
+        description: "Trading day already screened by the clock (skipped, e.g. an exchange holiday)"
+        type: string
+        default: ""
   push:
     branches: [radar-dev]
     paths: ["tools/radar/**", ".github/workflows/radar.yml"]
 
 permissions:
   contents: write
-
-concurrency:
-  group: radar-${{ github.ref }}
-  cancel-in-progress: false
+  actions: write
 
 jobs:
   gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 345
+    # Only one clock at a time: a newer one replaces a waiting one.
+    concurrency:
+      group: radar-clock-${{ github.ref }}
+      cancel-in-progress: true
     outputs:
       run: ${{ steps.wait.outputs.run }}
+      day: ${{ steps.wait.outputs.day }}
     steps:
       - name: Wait for the close (16:20 WIB)
         id: wait
         env:
           EVENT: ${{ github.event_name }}
+          CLOCK: ${{ github.event.inputs.clock }}
+          AFTER: ${{ github.event.inputs.after }}
           DIR: ${{ github.ref == 'refs/heads/radar-dev' && 'radar-dev' || 'radar' }}
         run: |
-          if [ "$EVENT" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          today=$(TZ=Asia/Jakarta date +%F)
+          # Manual run or a push to radar-dev: screen now.
+          if [ "$EVENT" = "push" ] || { [ "$EVENT" = "workflow_dispatch" ] && [ "$CLOCK" != "true" ]; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           published=$(curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/market-data/$DIR/latest.json?t=$(date +%s)" | python3 -c "import sys,json;print(json.load(sys.stdin).get('date',''))" 2>/dev/null || true)
-          if [ "$published" = "$today" ]; then echo "Radar $today already published"; echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          target=$(TZ=Asia/Jakarta date -d "$today 16:20" +%s)
+          # Next trading-day 16:20 WIB whose radar is not published yet.
+          d=$(TZ=Asia/Jakarta date +%F)
+          for i in 0 1 2 3 4 5 6 7; do
+            dow=$(date -d "$d" +%u)
+            if [ "$dow" -le 5 ] && [ "$d" \> "$published" ] && [ "$d" != "$AFTER" ]; then
+              target=$(TZ=Asia/Jakarta date -d "$d 16:20" +%s)
+              # Past 23:00 WIB a missed day is skipped (the close is too old to be useful as "tomorrow").
+              late=$(TZ=Asia/Jakarta date -d "$d 23:00" +%s)
+              if [ "$(date +%s)" -lt "$late" ]; then break; fi
+            fi
+            d=$(date -d "$d + 1 day" +%F)
+          done
           now=$(date +%s)
           wait=$((target - now))
-          if [ $wait -gt 19800 ]; then echo "Too early (${wait}s); a later run will screen"; echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          if [ $wait -gt 0 ]; then echo "Waiting ${wait}s until 16:20 WIB"; sleep $wait; fi
+          echo "Next screening: $d 16:20 WIB (in ${wait}s); published: $published"
+          if [ $wait -gt 19800 ]; then
+            sleep 19800
+            echo "run=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ $wait -gt 0 ]; then sleep $wait; fi
           echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "day=$d" >> "$GITHUB_OUTPUT"
 
   radar:
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    concurrency:
+      group: radar-run-${{ github.ref }}
+      cancel-in-progress: false
     env:
       RADAR_DIR: ${{ github.ref == 'refs/heads/radar-dev' && 'radar-dev' || 'radar' }}
     steps:
@@ -112,3 +141,15 @@ jobs:
           git add -A "$RADAR_DIR"
           git commit -qm "Radar $(python3 -c "import json;print(json.load(open('$RADAR_DIR/latest.json'))['date'])") ($(date -u +%FT%TZ))" || { echo "no change"; exit 0; }
           for i in 1 2 3; do git push -q origin HEAD:market-data && break; git pull -q --rebase origin market-data; done
+
+  # Keep the clock going: start the next waiting run (main only).
+  next:
+    needs: [gate, radar]
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch the next clock run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AFTER: ${{ needs.gate.outputs.day || github.event.inputs.after }}
+        run: gh workflow run radar.yml -R "${{ github.repository }}" --ref main -f clock=true -f after="$AFTER"

@@ -146,9 +146,15 @@ object Monitor {
             val page = pages[sig.symbol]
             if (page != null) {
                 val start = sig.startDate ?: sig.refDate
-                val completed = Market.completedOnly(page, now).filter { it.date > start }
-                val merged = (s.trackBars + completed).associateBy { it.date }.values.sortedBy { it.date }
-                val running = page.lastOrNull()?.takeIf { inSession && it.date == today && it.date > start }
+                // Only sessions with real trades count: before 09:00 (pre-opening) Stockbit already lists
+                // today with open = high = low = previous close and no volume, which is not a fill.
+                val traded = tradedOnly(page)
+                val completed = Market.completedOnly(traded, now).filter { it.date > start }
+                val merged = (s.trackBars.filter { b -> b.date != today || traded.any { it.date == today } } + completed)
+                    .associateBy { it.date }.values.sortedBy { it.date }
+                val running = traded.lastOrNull()?.takeIf {
+                    inSession && it.date == today && it.date > start && now.toLocalTime() >= java.time.LocalTime.of(9, 0)
+                }
                 s = s.copy(
                     trackBars = merged,
                     live = running?.let { LivePoint(it.date, it.open, it.high, it.low, it.close, System.currentTimeMillis()) },
@@ -213,6 +219,16 @@ object Monitor {
             )
         } catch (e: Exception) {
         }
+    }
+
+    /**
+     * Drops bars without any trade (no volume, value or frequency), e.g. today's placeholder before the
+     * open or a day the stock did not trade. Kept as is when the feed carries no volume at all.
+     */
+    private fun tradedOnly(page: List<Bar>): List<Bar> {
+        fun hasTrades(b: Bar) = b.volume > 0 || b.value > 0 || b.freq > 0
+        if (page.none { hasTrades(it) }) return page
+        return page.filter { hasTrades(it) }
     }
 
     /** Renews the Stockbit token once a day (refresh token), even when nothing is being tracked. */
